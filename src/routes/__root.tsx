@@ -72,14 +72,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "Atlas Sanctum" },
+      { name: "description", content: "Atlas Bloom connects communities, farms, and businesses into a regenerative economic network." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "Atlas Sanctum" },
+      { property: "og:description", content: "Atlas Bloom connects communities, farms, and businesses into a regenerative economic network." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Atlas Sanctum" },
+      { name: "twitter:description", content: "Atlas Bloom connects communities, farms, and businesses into a regenerative economic network." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/518406dc-cbc6-4bb2-865d-ee2373975e4e/id-preview-b4a48147--77f0e383-aa6e-4608-abcf-0932c636ef72.lovable.app-1779031953774.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/518406dc-cbc6-4bb2-865d-ee2373975e4e/id-preview-b4a48147--77f0e383-aa6e-4608-abcf-0932c636ef72.lovable.app-1779031953774.png" },
     ],
     links: [
       {
