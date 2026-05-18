@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Wifi, WifiOff } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { AtlasMark } from "./AtlasMark";
+import { useAtlas } from "@/lib/atlas-store";
 
 const links = [
   { href: "#impact", label: "Impact" },
@@ -15,6 +17,7 @@ const links = [
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const { role, lowBandwidth, setLowBandwidth } = useAtlas();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16);
@@ -29,11 +32,7 @@ export function Nav() {
         scrolled ? "py-2" : "py-4"
       }`}
     >
-      <div
-        className={`mx-auto max-w-7xl px-4 transition-all duration-500 ${
-          scrolled ? "" : ""
-        }`}
-      >
+      <div className="mx-auto max-w-7xl px-4">
         <div
           className={`flex items-center justify-between rounded-2xl px-4 py-3 transition-all duration-500 ${
             scrolled ? "glass-dark shadow-[var(--shadow-elevated)]" : ""
@@ -62,10 +61,31 @@ export function Nav() {
           </nav>
 
           <div className="hidden items-center gap-2 md:flex">
-            <Button variant="ghost" className="text-bone hover:bg-white/10 hover:text-bone">
-              Sign in
-            </Button>
-            <Button variant="gold">Start Free</Button>
+            <button
+              onClick={() => setLowBandwidth(!lowBandwidth)}
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-bone/80 hover:bg-white/10"
+              aria-pressed={lowBandwidth}
+              title="Low bandwidth mode"
+            >
+              {lowBandwidth ? <WifiOff className="h-3.5 w-3.5" /> : <Wifi className="h-3.5 w-3.5" />}
+              <span className="hidden xl:inline">{lowBandwidth ? "2G mode" : "Full"}</span>
+            </button>
+            {role ? (
+              <Link to="/dashboard">
+                <Button variant="ghost" className="text-bone hover:bg-white/10 hover:text-bone">
+                  Dashboard
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/onboarding">
+                <Button variant="ghost" className="text-bone hover:bg-white/10 hover:text-bone">
+                  Sign in
+                </Button>
+              </Link>
+            )}
+            <Link to="/onboarding">
+              <Button variant="gold">{role ? "Switch role" : "Start Free"}</Button>
+            </Link>
           </div>
 
           <button
@@ -91,10 +111,16 @@ export function Nav() {
                 </a>
               ))}
               <div className="mt-2 flex gap-2">
-                <Button variant="ghost" className="flex-1 text-bone hover:bg-white/10">
-                  Sign in
-                </Button>
-                <Button variant="gold" className="flex-1">Start Free</Button>
+                <Link to={role ? "/dashboard" : "/onboarding"} className="flex-1">
+                  <Button variant="ghost" className="w-full text-bone hover:bg-white/10">
+                    {role ? "Dashboard" : "Sign in"}
+                  </Button>
+                </Link>
+                <Link to="/onboarding" className="flex-1">
+                  <Button variant="gold" className="w-full">
+                    {role ? "Switch role" : "Start Free"}
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>

@@ -234,3 +234,13 @@
   background-size: 200% 100%;
   animation: shimmer 2.5s linear infinite;
 }
+
+/* Low-bandwidth mode: kill heavy effects + images */
+.atlas-lowbw img:not([data-keep]) { display: none !important; }
+.atlas-lowbw .glass,
+.atlas-lowbw .glass-dark { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: var(--card) !important; }
+.atlas-lowbw .animate-pulse-ring,
+.atlas-lowbw .animate-float-slow,
+.atlas-lowbw .animate-shimmer { animation: none !important; }
+.atlas-lowbw *, .atlas-lowbw *::before, .atlas-lowbw *::after { transition-duration: 0ms !important; }
+
