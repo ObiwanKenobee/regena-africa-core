@@ -1,18 +1,23 @@
 import { Section, SectionHeader } from "./Section";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Truck, CheckCircle2, Smartphone } from "lucide-react";
+import { Search, MapPin, Truck, CheckCircle2, Smartphone, ShoppingBasket } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import produceImg from "@/assets/produce-flatlay.jpg";
+import { useAtlas } from "@/lib/atlas-store";
 
 const listings = [
-  { name: "Sukuma Wiki · Bunch", farm: "Kangemi Co-op", price: 35, unit: "kg", stock: "420 kg", tag: "Organic" },
-  { name: "Free-range Eggs · Tray", farm: "Nakuru Egg Collective", price: 480, unit: "tray", stock: "180 trays", tag: "Verified" },
-  { name: "Compost · Grade A", farm: "Kibera Recovery", price: 22, unit: "kg", stock: "2.1 t", tag: "Recycled" },
-  { name: "Tomatoes · Crate", farm: "Loitokitok Farms", price: 1200, unit: "crate", stock: "62 crates", tag: "Fresh" },
+  { id: "sukuma", name: "Sukuma Wiki · Bunch", farm: "Kangemi Co-op", price: 35, unit: "kg", stock: "420 kg", tag: "Organic" },
+  { id: "eggs", name: "Free-range Eggs · Tray", farm: "Nakuru Egg Collective", price: 480, unit: "tray", stock: "180 trays", tag: "Verified" },
+  { id: "compost", name: "Compost · Grade A", farm: "Kibera Recovery", price: 22, unit: "kg", stock: "2.1 t", tag: "Recycled" },
+  { id: "tomato", name: "Tomatoes · Crate", farm: "Loitokitok Farms", price: 1200, unit: "crate", stock: "62 crates", tag: "Fresh" },
 ];
 
 const filters = ["All", "Produce", "Compost", "Eggs & Protein", "Grains", "Delivery"];
 
 export function Marketplace() {
+  const { addToCart, cart } = useAtlas();
+  const cartCount = cart.reduce((s, i) => s + i.qty, 0);
+
   return (
     <Section id="marketplace" className="bg-muted/30">
       <div className="grid items-end gap-8 lg:grid-cols-2">
@@ -22,8 +27,15 @@ export function Marketplace() {
           description="Farms, households, SMEs, recyclers, and riders trade on the same operational rails — with live pricing, logistics, and M-Pesa settlement."
         />
         <div className="flex items-center gap-2 lg:justify-end">
-          <Button variant="outline">Sell on Atlas</Button>
-          <Button variant="forest">Browse marketplace</Button>
+          <Link to="/onboarding">
+            <Button variant="outline">Sell on Atlas</Button>
+          </Link>
+          <Link to="/checkout">
+            <Button variant="forest">
+              <ShoppingBasket className="h-4 w-4" />
+              Basket {cartCount > 0 && `(${cartCount})`}
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -84,7 +96,7 @@ export function Marketplace() {
             <div className="grid gap-3 sm:grid-cols-2">
               {listings.map((l) => (
                 <div
-                  key={l.name}
+                  key={l.id}
                   className="group overflow-hidden rounded-xl border border-border bg-background transition hover:border-moss/40 hover:shadow-[var(--shadow-soft)]"
                 >
                   <div className="relative aspect-[4/3] overflow-hidden bg-muted">
@@ -117,14 +129,36 @@ export function Marketplace() {
                     </div>
                     <div className="mt-3 flex items-center justify-between text-xs">
                       <span className="text-muted-foreground">{l.stock} available</span>
-                      <button className="font-medium text-forest-deep hover:underline">
-                        Add to box →
+                      <button
+                        onClick={() =>
+                          addToCart({
+                            id: l.id,
+                            name: l.name,
+                            farm: l.farm,
+                            price: l.price,
+                            unit: l.unit,
+                          })
+                        }
+                        className="font-medium text-forest-deep hover:underline"
+                      >
+                        Add to basket →
                       </button>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
+
+            {cartCount > 0 && (
+              <div className="mt-4 flex items-center justify-between rounded-xl border border-forest/30 bg-forest-deep/5 px-4 py-3 text-sm">
+                <span className="text-foreground">
+                  <span className="font-medium">{cartCount}</span> item{cartCount === 1 ? "" : "s"} in basket
+                </span>
+                <Link to="/checkout">
+                  <Button variant="forest" size="sm">Checkout with M-Pesa</Button>
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Logistics tracker */}
