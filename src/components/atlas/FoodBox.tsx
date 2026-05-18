@@ -52,8 +52,12 @@ export function FoodBox() {
           </div>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <Button variant="forest">Start your box</Button>
-            <Button variant="outline">See sample menu</Button>
+            <Link to="/foodbox">
+              <Button variant="forest">Start your box</Button>
+            </Link>
+            <Link to="/foodbox">
+              <Button variant="outline">Order via WhatsApp</Button>
+            </Link>
           </div>
         </div>
 
