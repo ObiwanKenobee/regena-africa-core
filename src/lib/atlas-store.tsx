@@ -127,7 +127,7 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
         prev.map((o) => {
           if (o.status === "delivered") return o;
           const nextProgress = Math.min(100, o.progress + 12);
-          let status = o.status;
+          let status: OrderStatus = o.status;
           if (nextProgress >= 100) status = "delivered";
           else if (nextProgress >= 70) status = "in_transit";
           else if (nextProgress >= 40) status = "picked";
