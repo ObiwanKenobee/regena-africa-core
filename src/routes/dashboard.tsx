@@ -18,7 +18,7 @@ import {
   Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAtlas, statusLabel, type Role, ZONES } from "@/lib/atlas-store";
+import { useAtlas, statusLabel, type Role } from "@/lib/atlas-store";
 import { AtlasMark } from "@/components/atlas/AtlasMark";
 
 export const Route = createFileRoute("/dashboard")({
