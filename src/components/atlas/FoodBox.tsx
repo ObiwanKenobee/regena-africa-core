@@ -1,6 +1,7 @@
 import { Section, SectionHeader } from "./Section";
 import { Button } from "@/components/ui/button";
 import { CalendarCheck2, Apple, Leaf, Plus } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import produceImg from "@/assets/produce-flatlay.jpg";
 
 export function FoodBox() {
