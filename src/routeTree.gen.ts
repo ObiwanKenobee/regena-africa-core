@@ -14,6 +14,7 @@ import { Route as FoodboxRouteImport } from './routes/foodbox'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicMpesaSimulateRouteImport } from './routes/api/public/mpesa/simulate'
 import { Route as ApiPublicMpesaCallbackRouteImport } from './routes/api/public/mpesa/callback'
 
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -41,6 +42,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMpesaSimulateRoute = ApiPublicMpesaSimulateRouteImport.update({
+  id: '/api/public/mpesa/simulate',
+  path: '/api/public/mpesa/simulate',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicMpesaCallbackRoute = ApiPublicMpesaCallbackRouteImport.update({
   id: '/api/public/mpesa/callback',
   path: '/api/public/mpesa/callback',
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/foodbox': typeof FoodboxRoute
   '/onboarding': typeof OnboardingRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
+  '/api/public/mpesa/simulate': typeof ApiPublicMpesaSimulateRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/foodbox': typeof FoodboxRoute
   '/onboarding': typeof OnboardingRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
+  '/api/public/mpesa/simulate': typeof ApiPublicMpesaSimulateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,6 +79,7 @@ export interface FileRoutesById {
   '/foodbox': typeof FoodboxRoute
   '/onboarding': typeof OnboardingRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
+  '/api/public/mpesa/simulate': typeof ApiPublicMpesaSimulateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -81,6 +90,7 @@ export interface FileRouteTypes {
     | '/foodbox'
     | '/onboarding'
     | '/api/public/mpesa/callback'
+    | '/api/public/mpesa/simulate'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -89,6 +99,7 @@ export interface FileRouteTypes {
     | '/foodbox'
     | '/onboarding'
     | '/api/public/mpesa/callback'
+    | '/api/public/mpesa/simulate'
   id:
     | '__root__'
     | '/'
@@ -97,6 +108,7 @@ export interface FileRouteTypes {
     | '/foodbox'
     | '/onboarding'
     | '/api/public/mpesa/callback'
+    | '/api/public/mpesa/simulate'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -106,6 +118,7 @@ export interface RootRouteChildren {
   FoodboxRoute: typeof FoodboxRoute
   OnboardingRoute: typeof OnboardingRoute
   ApiPublicMpesaCallbackRoute: typeof ApiPublicMpesaCallbackRoute
+  ApiPublicMpesaSimulateRoute: typeof ApiPublicMpesaSimulateRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -145,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/mpesa/simulate': {
+      id: '/api/public/mpesa/simulate'
+      path: '/api/public/mpesa/simulate'
+      fullPath: '/api/public/mpesa/simulate'
+      preLoaderRoute: typeof ApiPublicMpesaSimulateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/mpesa/callback': {
       id: '/api/public/mpesa/callback'
       path: '/api/public/mpesa/callback'
@@ -162,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   FoodboxRoute: FoodboxRoute,
   OnboardingRoute: OnboardingRoute,
   ApiPublicMpesaCallbackRoute: ApiPublicMpesaCallbackRoute,
+  ApiPublicMpesaSimulateRoute: ApiPublicMpesaSimulateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
