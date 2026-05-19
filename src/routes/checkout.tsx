@@ -1,5 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import {
   Smartphone,
   ShieldCheck,
@@ -15,6 +16,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAtlas, statusLabel, type OrderStatus } from "@/lib/atlas-store";
 import { AtlasMark } from "@/components/atlas/AtlasMark";
+import { initiateMpesaStk } from "@/lib/atlas-cloud.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({
@@ -28,38 +32,95 @@ export const Route = createFileRoute("/checkout")({
 
 const FLOW: OrderStatus[] = ["paid", "preparing", "picked", "in_transit", "delivered"];
 
-const RIDERS = [
-  { name: "Brian K.", route: "Kangemi → Westlands" },
-  { name: "Achieng' O.", route: "Kibera → Kilimani" },
-  { name: "Peter M.", route: "Nakuru → Naivasha" },
-];
+type LiveOrder = {
+  id: string;
+  status: string;
+  progress: number;
+  total: number;
+  rider: string | null;
+  route: string | null;
+  mpesa_receipt: string | null;
+  failure_reason: string | null;
+};
 
 function CheckoutPage() {
-  const { cart, cartTotal, updateQty, clearCart, placeOrder, orders, advanceOrder } = useAtlas();
-  const [phone, setPhone] = useState("0712••• 442");
+  const { cart, cartTotal, updateQty, clearCart } = useAtlas();
+  const nav = useNavigate();
+  const initiate = useServerFn(initiateMpesaStk);
+  const [phone, setPhone] = useState("0712345678");
   const [stage, setStage] = useState<"cart" | "stk" | "confirmed">("cart");
-  const [orderId, setOrderId] = useState<string | null>(null);
+  const [order, setOrder] = useState<LiveOrder | null>(null);
 
-  const startPay = () => {
+  // Require auth — bounce to /auth if no session
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) nav({ to: "/auth", search: { redirect: "/checkout", mode: "signin" } });
+    });
+  }, [nav]);
+
+  // Subscribe to this order's live status
+  useEffect(() => {
+    if (!order?.id) return;
+    const ch = supabase
+      .channel(`order-${order.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "orders", filter: `id=eq.${order.id}` },
+        (payload) => {
+          const o = payload.new as LiveOrder;
+          setOrder((prev) => (prev ? { ...prev, ...o } : prev));
+          if (o.status === "paid") toast.success("M-Pesa payment confirmed");
+          if (o.status === "delivered") toast.success("Delivered!");
+          if (o.status === "failed") toast.error(o.failure_reason || "Payment failed");
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [order?.id]);
+
+  const startPay = async () => {
     if (!cart.length) return;
     setStage("stk");
-    setTimeout(() => {
-      const rider = RIDERS[Math.floor(Math.random() * RIDERS.length)];
-      const o = placeOrder({
-        items: cart,
-        total: cartTotal,
-        phone,
-        rider: rider.name,
-        route: rider.route,
-        channel: "marketplace",
+    try {
+      const res = await initiate({
+        data: {
+          phone,
+          channel: "marketplace",
+          items: cart.map((c) => ({ name: c.name, farm: c.farm, price: c.price, unit: c.unit, qty: c.qty })),
+        },
       });
-      setOrderId(o.id);
+      setOrder({
+        id: res.order_id,
+        status: "stk_sent",
+        progress: 5,
+        total: res.amount,
+        rider: null,
+        route: null,
+        mpesa_receipt: null,
+        failure_reason: null,
+      });
+      // Fire the mock Daraja callback (in real Daraja, Safaricom fires this)
+      await fetch("/api/public/mpesa/simulate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          checkout_id: res.checkout_id,
+          outcome: "paid",
+          amount: res.amount,
+          phone,
+          delay_ms: 2500,
+        }),
+      });
       clearCart();
       setStage("confirmed");
-    }, 2200);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "STK push failed");
+      setStage("cart");
+    }
   };
 
-  const trackedOrder = orders.find((o) => o.id === orderId) ?? orders[0];
+  const trackedOrder = order;
+
 
   return (
     <div className="min-h-screen bg-muted/30">

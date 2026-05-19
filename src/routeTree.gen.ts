@@ -13,7 +13,12 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as FoodboxRouteImport } from './routes/foodbox'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as ApiPublicMpesaSimulateRouteImport } from './routes/api/public/mpesa/simulate'
+import { Route as ApiPublicMpesaCallbackRouteImport } from './routes/api/public/mpesa/callback'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -35,48 +40,118 @@ const CheckoutRoute = CheckoutRouteImport.update({
   path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const ApiPublicMpesaSimulateRoute = ApiPublicMpesaSimulateRouteImport.update({
+  id: '/api/public/mpesa/simulate',
+  path: '/api/public/mpesa/simulate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicMpesaCallbackRoute = ApiPublicMpesaCallbackRouteImport.update({
+  id: '/api/public/mpesa/callback',
+  path: '/api/public/mpesa/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/checkout': typeof CheckoutRoute
   '/dashboard': typeof DashboardRoute
   '/foodbox': typeof FoodboxRoute
   '/onboarding': typeof OnboardingRoute
+  '/admin': typeof AuthenticatedAdminRoute
+  '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
+  '/api/public/mpesa/simulate': typeof ApiPublicMpesaSimulateRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/checkout': typeof CheckoutRoute
   '/dashboard': typeof DashboardRoute
   '/foodbox': typeof FoodboxRoute
   '/onboarding': typeof OnboardingRoute
+  '/admin': typeof AuthenticatedAdminRoute
+  '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
+  '/api/public/mpesa/simulate': typeof ApiPublicMpesaSimulateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/auth': typeof AuthRoute
   '/checkout': typeof CheckoutRoute
   '/dashboard': typeof DashboardRoute
   '/foodbox': typeof FoodboxRoute
   '/onboarding': typeof OnboardingRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
+  '/api/public/mpesa/simulate': typeof ApiPublicMpesaSimulateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/checkout' | '/dashboard' | '/foodbox' | '/onboarding'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/checkout'
+    | '/dashboard'
+    | '/foodbox'
+    | '/onboarding'
+    | '/admin'
+    | '/api/public/mpesa/callback'
+    | '/api/public/mpesa/simulate'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/checkout' | '/dashboard' | '/foodbox' | '/onboarding'
-  id: '__root__' | '/' | '/checkout' | '/dashboard' | '/foodbox' | '/onboarding'
+  to:
+    | '/'
+    | '/auth'
+    | '/checkout'
+    | '/dashboard'
+    | '/foodbox'
+    | '/onboarding'
+    | '/admin'
+    | '/api/public/mpesa/callback'
+    | '/api/public/mpesa/simulate'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/checkout'
+    | '/dashboard'
+    | '/foodbox'
+    | '/onboarding'
+    | '/_authenticated/admin'
+    | '/api/public/mpesa/callback'
+    | '/api/public/mpesa/simulate'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  AuthRoute: typeof AuthRoute
   CheckoutRoute: typeof CheckoutRoute
   DashboardRoute: typeof DashboardRoute
   FoodboxRoute: typeof FoodboxRoute
   OnboardingRoute: typeof OnboardingRoute
+  ApiPublicMpesaCallbackRoute: typeof ApiPublicMpesaCallbackRoute
+  ApiPublicMpesaSimulateRoute: typeof ApiPublicMpesaSimulateRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -109,6 +184,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -116,26 +205,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/api/public/mpesa/simulate': {
+      id: '/api/public/mpesa/simulate'
+      path: '/api/public/mpesa/simulate'
+      fullPath: '/api/public/mpesa/simulate'
+      preLoaderRoute: typeof ApiPublicMpesaSimulateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/mpesa/callback': {
+      id: '/api/public/mpesa/callback'
+      path: '/api/public/mpesa/callback'
+      fullPath: '/api/public/mpesa/callback'
+      preLoaderRoute: typeof ApiPublicMpesaCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  AuthRoute: AuthRoute,
   CheckoutRoute: CheckoutRoute,
   DashboardRoute: DashboardRoute,
   FoodboxRoute: FoodboxRoute,
   OnboardingRoute: OnboardingRoute,
+  ApiPublicMpesaCallbackRoute: ApiPublicMpesaCallbackRoute,
+  ApiPublicMpesaSimulateRoute: ApiPublicMpesaSimulateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
