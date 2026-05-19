@@ -14,16 +14,268 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      listings: {
+        Row: {
+          active: boolean
+          created_at: string
+          farm: string
+          id: string
+          image: string | null
+          name: string
+          price: number
+          unit: string
+          zone_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          farm: string
+          id?: string
+          image?: string | null
+          name: string
+          price: number
+          unit?: string
+          zone_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          farm?: string
+          id?: string
+          image?: string | null
+          name?: string
+          price?: number
+          unit?: string
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listings_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_items: {
+        Row: {
+          farm: string
+          id: string
+          listing_id: string | null
+          name: string
+          order_id: string
+          price: number
+          qty: number
+          unit: string
+        }
+        Insert: {
+          farm: string
+          id?: string
+          listing_id?: string | null
+          name: string
+          order_id: string
+          price: number
+          qty: number
+          unit: string
+        }
+        Update: {
+          farm?: string
+          id?: string
+          listing_id?: string | null
+          name?: string
+          order_id?: string
+          price?: number
+          qty?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          channel: string
+          created_at: string
+          failure_reason: string | null
+          id: string
+          mpesa_checkout_id: string | null
+          mpesa_receipt: string | null
+          phone: string
+          progress: number
+          rider: string | null
+          route: string | null
+          status: string
+          total: number
+          updated_at: string
+          user_id: string | null
+          zone_id: string | null
+        }
+        Insert: {
+          channel?: string
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          mpesa_checkout_id?: string | null
+          mpesa_receipt?: string | null
+          phone: string
+          progress?: number
+          rider?: string | null
+          route?: string | null
+          status?: string
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+          zone_id?: string | null
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          mpesa_checkout_id?: string | null
+          mpesa_receipt?: string | null
+          phone?: string
+          progress?: number
+          rider?: string | null
+          route?: string | null
+          status?: string
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          preferred_role: string | null
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          preferred_role?: string | null
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          preferred_role?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      zones: {
+        Row: {
+          co2: number
+          deliveries: number
+          households: number
+          id: string
+          jobs: number
+          name: string
+          revenue: number
+          size: number
+          status: string
+          updated_at: string
+          waste: number
+          x: number
+          y: number
+        }
+        Insert: {
+          co2?: number
+          deliveries?: number
+          households?: number
+          id: string
+          jobs?: number
+          name: string
+          revenue?: number
+          size?: number
+          status?: string
+          updated_at?: string
+          waste?: number
+          x: number
+          y: number
+        }
+        Update: {
+          co2?: number
+          deliveries?: number
+          households?: number
+          id?: string
+          jobs?: number
+          name?: string
+          revenue?: number
+          size?: number
+          status?: string
+          updated_at?: string
+          waste?: number
+          x?: number
+          y?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "operator" | "member"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +402,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "operator", "member"],
+    },
   },
 } as const
