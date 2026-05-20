@@ -22,6 +22,22 @@ export function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const { role, lowBandwidth, setLowBandwidth } = useAtlas();
+  const [hasSession, setHasSession] = useState(false);
+  const checkAdmin = useServerFn(checkIsAdmin);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setHasSession(!!data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setHasSession(!!s));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const { data: adminData } = useQuery({
+    queryKey: ["is-admin", hasSession],
+    queryFn: () => checkAdmin(),
+    enabled: hasSession,
+    staleTime: 60_000,
+  });
+  const isAdmin = !!adminData?.isAdmin;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16);
