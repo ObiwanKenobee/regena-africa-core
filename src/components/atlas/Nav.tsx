@@ -103,6 +103,13 @@ export function Nav() {
                 </Button>
               </Link>
             )}
+            {isAdmin && (
+              <Link to="/admin">
+                <Button variant="ghost" className="gap-1.5 text-gold-soft hover:bg-white/10 hover:text-gold">
+                  <ShieldCheck className="h-4 w-4" /> Admin
+                </Button>
+              </Link>
+            )}
             <Link to="/onboarding">
               <Button variant="gold">{role ? "Switch role" : "Start Free"}</Button>
             </Link>
