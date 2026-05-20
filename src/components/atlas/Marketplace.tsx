@@ -163,7 +163,7 @@ export function Marketplace() {
                       </div>
                     </div>
                     <div className="mt-3 flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">{l.stock} available</span>
+                      <span className="text-muted-foreground">{l.stock ?? "In stock"}</span>
                       <button
                         onClick={() =>
                           addToCart({
