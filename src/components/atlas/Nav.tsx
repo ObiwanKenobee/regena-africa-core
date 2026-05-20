@@ -149,6 +149,13 @@ export function Nav() {
                   </Button>
                 </Link>
               </div>
+              {isAdmin && (
+                <Link to="/admin" onClick={() => setOpen(false)} className="mt-2">
+                  <Button variant="ghost" className="w-full gap-1.5 text-gold-soft hover:bg-white/10">
+                    <ShieldCheck className="h-4 w-4" /> Admin console
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         )}
