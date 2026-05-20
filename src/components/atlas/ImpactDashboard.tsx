@@ -223,38 +223,73 @@ export function ImpactDashboard() {
               />
               {zones.map((z) => {
                 const active = selectedZone === z.id;
+                const hovered = hoveredZone === z.id;
+                const emphasised = active || hovered;
                 return (
                   <g
                     key={z.id}
                     onClick={() => setSelectedZone(z.id)}
-                    className="cursor-pointer"
+                    onMouseEnter={() => setHoveredZone(z.id)}
+                    onMouseLeave={() => setHoveredZone((p) => (p === z.id ? null : p))}
+                    onFocus={() => setHoveredZone(z.id)}
+                    onBlur={() => setHoveredZone((p) => (p === z.id ? null : p))}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`Focus ${z.name}`}
+                    aria-pressed={active}
+                    className="cursor-pointer outline-none focus-visible:[&>circle]:stroke-[oklch(0.55_0.115_45)]"
                   >
                     <circle
                       cx={z.x}
                       cy={z.y}
                       r={z.size / 8}
-                      fill={active ? "oklch(0.78 0.13 85 / 0.5)" : "oklch(0.78 0.13 85 / 0.25)"}
+                      fill={active ? "oklch(0.78 0.13 85 / 0.55)" : hovered ? "oklch(0.78 0.13 85 / 0.4)" : "oklch(0.78 0.13 85 / 0.25)"}
                       className="animate-pulse-ring"
                       style={{ transformOrigin: `${z.x}px ${z.y}px` }}
                     />
+                    {active && (
+                      <circle
+                        cx={z.x}
+                        cy={z.y}
+                        r={z.size / 6}
+                        fill="none"
+                        stroke="oklch(0.55 0.115 45 / 0.7)"
+                        strokeWidth="0.4"
+                        strokeDasharray="1 1"
+                      />
+                    )}
                     <circle
                       cx={z.x}
                       cy={z.y}
-                      r={active ? z.size / 10 : z.size / 14}
+                      r={active ? z.size / 9 : hovered ? z.size / 11 : z.size / 14}
                       fill={active ? "oklch(0.55 0.115 45)" : "oklch(0.78 0.13 85)"}
                       stroke={active ? "oklch(0.24 0.045 155)" : "transparent"}
                       strokeWidth="0.6"
+                      className="transition-all"
                     />
                     <text
                       x={z.x + 2}
                       y={z.y - 1.5}
-                      fontSize="2.4"
+                      fontSize={emphasised ? "2.8" : "2.4"}
                       fill="oklch(0.24 0.045 155)"
                       fontFamily="Inter"
-                      fontWeight={active ? 600 : 400}
+                      fontWeight={emphasised ? 600 : 400}
+                      className="pointer-events-none select-none"
                     >
                       {z.name}
                     </text>
+                    {hovered && !active && (
+                      <text
+                        x={z.x + 2}
+                        y={z.y + 2.2}
+                        fontSize="2"
+                        fill="oklch(0.34 0.07 152)"
+                        fontFamily="Inter"
+                        className="pointer-events-none select-none"
+                      >
+                        {z.households.toLocaleString()} households
+                      </text>
+                    )}
                   </g>
                 );
               })}
