@@ -20,19 +20,27 @@ export function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const { role, lowBandwidth, setLowBandwidth } = useAtlas();
-  const [hasSession, setHasSession] = useState(false);
-  const checkAdmin = useServerFn(checkIsAdmin);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setHasSession(!!data.session));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setHasSession(!!s));
+    supabase.auth.getSession().then(({ data }) => setUserId(data.session?.user.id ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setUserId(s?.user.id ?? null));
     return () => sub.subscription.unsubscribe();
   }, []);
 
   const { data: adminData } = useQuery({
-    queryKey: ["is-admin", hasSession],
-    queryFn: () => checkAdmin(),
-    enabled: hasSession,
+    queryKey: ["is-admin", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId!)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (error) return { isAdmin: false };
+      return { isAdmin: !!data };
+    },
+    enabled: !!userId,
     staleTime: 60_000,
   });
   const isAdmin = !!adminData?.isAdmin;
