@@ -2,14 +2,28 @@ import { Section, SectionHeader } from "./Section";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Truck, CheckCircle2, Smartphone, ShoppingBasket } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import produceImg from "@/assets/produce-flatlay.jpg";
 import { useAtlas } from "@/lib/atlas-store";
+import { getListings } from "@/lib/atlas-cloud.functions";
 
-const listings = [
-  { id: "sukuma", name: "Sukuma Wiki · Bunch", farm: "Kangemi Co-op", price: 35, unit: "kg", stock: "420 kg", tag: "Organic" },
-  { id: "eggs", name: "Free-range Eggs · Tray", farm: "Nakuru Egg Collective", price: 480, unit: "tray", stock: "180 trays", tag: "Verified" },
-  { id: "compost", name: "Compost · Grade A", farm: "Kibera Recovery", price: 22, unit: "kg", stock: "2.1 t", tag: "Recycled" },
-  { id: "tomato", name: "Tomatoes · Crate", farm: "Loitokitok Farms", price: 1200, unit: "crate", stock: "62 crates", tag: "Fresh" },
+type Listing = {
+  id: string;
+  name: string;
+  farm: string;
+  price: number;
+  unit: string;
+  image: string | null;
+  tag?: string;
+  stock?: string;
+};
+
+const FALLBACK: Listing[] = [
+  { id: "sukuma", name: "Sukuma Wiki · Bunch", farm: "Kangemi Co-op", price: 35, unit: "kg", image: null, stock: "420 kg", tag: "Organic" },
+  { id: "eggs", name: "Free-range Eggs · Tray", farm: "Nakuru Egg Collective", price: 480, unit: "tray", image: null, stock: "180 trays", tag: "Verified" },
+  { id: "compost", name: "Compost · Grade A", farm: "Kibera Recovery", price: 22, unit: "kg", image: null, stock: "2.1 t", tag: "Recycled" },
+  { id: "tomato", name: "Tomatoes · Crate", farm: "Loitokitok Farms", price: 1200, unit: "crate", image: null, stock: "62 crates", tag: "Fresh" },
 ];
 
 const filters = ["All", "Produce", "Compost", "Eggs & Protein", "Grains", "Delivery"];
@@ -17,6 +31,25 @@ const filters = ["All", "Produce", "Compost", "Eggs & Protein", "Grains", "Deliv
 export function Marketplace() {
   const { addToCart, cart } = useAtlas();
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
+  const fetchListings = useServerFn(getListings);
+  const { data } = useQuery({
+    queryKey: ["public-listings"],
+    queryFn: () => fetchListings(),
+    staleTime: 30_000,
+  });
+  const listings: Listing[] =
+    data?.listings && data.listings.length > 0
+      ? data.listings.map((l) => ({
+          id: l.id,
+          name: l.name,
+          farm: l.farm,
+          price: Number(l.price),
+          unit: l.unit,
+          image: l.image ?? null,
+          tag: "Live",
+        }))
+      : FALLBACK;
+
 
   return (
     <Section id="marketplace" className="bg-muted/30">
