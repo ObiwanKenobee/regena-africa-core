@@ -236,10 +236,38 @@ function CheckoutPage() {
 
           {order && (
             <div className="mt-10">
-              <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                Active delivery
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Active delivery
+                  </div>
+                  <h2 className="font-display text-xl tracking-tight text-foreground">Track in real time</h2>
+                </div>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
+                    realtimeOk
+                      ? "bg-moss/15 text-forest"
+                      : "bg-gold/15 text-clay"
+                  }`}
+                  title={realtimeOk ? "Live websocket connected" : "Falling back to polling every 5s"}
+                >
+                  {realtimeOk ? "Live" : "Polling"}
+                </span>
               </div>
-              <h2 className="font-display text-xl tracking-tight text-foreground">Track in real time</h2>
+              {pollError && (
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-2 text-xs text-destructive">
+                  <span>
+                    Can't reach order updates — {pollError}. Showing last known status:{" "}
+                    <span className="font-medium">{order.status}</span>.
+                  </span>
+                  <button
+                    onClick={() => { setOrder((p) => (p ? { ...p } : p)); }}
+                    className="font-medium underline"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
               <div className="mt-4 rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-soft)]">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
