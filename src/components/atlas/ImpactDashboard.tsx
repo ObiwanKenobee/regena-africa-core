@@ -205,6 +205,7 @@ export function ImpactDashboard() {
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Leaf className="h-3.5 w-3.5 text-moss" /> {zones.length} active counties
+              {isFetching && <span className="ml-1 text-[10px] uppercase tracking-wider text-clay">syncing…</span>}
             </div>
           </div>
           <div className="relative mt-5 aspect-[5/4] w-full overflow-hidden rounded-xl bg-gradient-to-br from-forest-deep/5 to-moss/10">
