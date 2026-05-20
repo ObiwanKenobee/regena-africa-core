@@ -57,24 +57,68 @@ function CheckoutPage() {
     });
   }, [nav]);
 
+  const [pollError, setPollError] = useState<string | null>(null);
+  const [realtimeOk, setRealtimeOk] = useState(false);
+  const [retryNonce, setRetryNonce] = useState(0);
+
   useEffect(() => {
     if (!order?.id) return;
+    setPollError(null);
+    setRealtimeOk(false);
+
+    const applyUpdate = (o: Partial<LiveOrder>) => {
+      setOrder((prev) => {
+        if (!prev) return prev;
+        if (o.status && o.status !== prev.status) {
+          if (o.status === "paid") toast.success("M-Pesa payment confirmed");
+          if (o.status === "delivered") toast.success("Delivered!");
+          if (o.status === "failed") toast.error(o.failure_reason || "Payment failed");
+        }
+        return { ...prev, ...o };
+      });
+    };
+
     const ch = supabase
       .channel(`order-${order.id}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "orders", filter: `id=eq.${order.id}` },
-        (payload) => {
-          const o = payload.new as LiveOrder;
-          setOrder((prev) => (prev ? { ...prev, ...o } : prev));
-          if (o.status === "paid") toast.success("M-Pesa payment confirmed");
-          if (o.status === "delivered") toast.success("Delivered!");
-          if (o.status === "failed") toast.error(o.failure_reason || "Payment failed");
-        },
+        (payload) => applyUpdate(payload.new as LiveOrder),
       )
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [order?.id]);
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") setRealtimeOk(true);
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") setRealtimeOk(false);
+      });
+
+    // Polling fallback — always runs alongside realtime so missed events recover.
+    let cancelled = false;
+    const poll = async () => {
+      if (cancelled || !order?.id) return;
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id,status,progress,total,rider,route,mpesa_receipt,failure_reason")
+        .eq("id", order.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error) {
+        setPollError(error.message);
+        return;
+      }
+      if (!data) {
+        setPollError("Order not found — it may have been cancelled.");
+        return;
+      }
+      setPollError(null);
+      applyUpdate(data as LiveOrder);
+    };
+    poll();
+    const interval = setInterval(poll, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      supabase.removeChannel(ch);
+    };
+  }, [order?.id, retryNonce]);
 
   const startPay = async () => {
     if (!cart.length) return;
@@ -193,10 +237,38 @@ function CheckoutPage() {
 
           {order && (
             <div className="mt-10">
-              <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                Active delivery
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Active delivery
+                  </div>
+                  <h2 className="font-display text-xl tracking-tight text-foreground">Track in real time</h2>
+                </div>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
+                    realtimeOk
+                      ? "bg-moss/15 text-forest"
+                      : "bg-gold/15 text-clay"
+                  }`}
+                  title={realtimeOk ? "Live websocket connected" : "Falling back to polling every 5s"}
+                >
+                  {realtimeOk ? "Live" : "Polling"}
+                </span>
               </div>
-              <h2 className="font-display text-xl tracking-tight text-foreground">Track in real time</h2>
+              {pollError && (
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-2 text-xs text-destructive">
+                  <span>
+                    Can't reach order updates — {pollError}. Showing last known status:{" "}
+                    <span className="font-medium">{order.status}</span>.
+                  </span>
+                  <button
+                    onClick={() => { setPollError(null); setRetryNonce((n) => n + 1); }}
+                    className="font-medium underline"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
               <div className="mt-4 rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-soft)]">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>

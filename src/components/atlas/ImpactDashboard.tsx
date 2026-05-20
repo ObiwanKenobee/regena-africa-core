@@ -70,21 +70,23 @@ export function ImpactDashboard() {
   const [run, setRun] = useState(false);
   const { selectedZone, setSelectedZone } = useAtlas();
   const fetchZones = useServerFn(getZones);
-  const { data } = useQuery({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["public-zones"],
     queryFn: () => fetchZones(),
     staleTime: 30_000,
+    retry: 2,
   });
-  const zones: Zone[] =
-    data?.zones && data.zones.length > 0
-      ? data.zones.map((z) => ({
-          ...z,
-          waste: Number(z.waste),
-          co2: Number(z.co2),
-          revenue: Number(z.revenue),
-          status: (z.status as Zone["status"]) ?? "pilot",
-        }))
-      : ZONES;
+  const liveZones: Zone[] =
+    data?.zones?.map((z) => ({
+      ...z,
+      waste: Number(z.waste),
+      co2: Number(z.co2),
+      revenue: Number(z.revenue),
+      status: (z.status as Zone["status"]) ?? "pilot",
+    })) ?? [];
+  const zones: Zone[] = liveZones.length > 0 ? liveZones : ZONES;
+  const usingFallback = liveZones.length === 0 && !isLoading;
+  const [hoveredZone, setHoveredZone] = useState<string | null>(null);
   const zone = zones.find((z) => z.id === selectedZone) ?? zones[0];
 
   // Network totals
@@ -122,6 +124,23 @@ export function ImpactDashboard() {
         description="Click any zone on the map to see what's flowing through that county right now. Every kilogram, kilowatt, and shilling is tracked, verified, and shared back."
       />
 
+      {isError && (
+        <div className="mt-6 flex items-center justify-between rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-2 text-xs text-destructive">
+          <span>
+            Couldn't load live zone metrics ({error instanceof Error ? error.message : "network error"}). Showing
+            last known network.
+          </span>
+          <button onClick={() => refetch()} className="font-medium underline">
+            Retry
+          </button>
+        </div>
+      )}
+      {usingFallback && !isError && (
+        <div className="mt-6 rounded-xl border border-border bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
+          No zones configured yet — showing demo network. Add zones from the Admin console to populate this map.
+        </div>
+      )}
+
       <div className="mt-8 flex flex-wrap items-center gap-2">
         <button
           onClick={() => setSelectedZone("all")}
@@ -152,12 +171,27 @@ export function ImpactDashboard() {
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <MetricCard icon={Users} label="Households Connected" value={m.households} delta="+312 wk" run={run} />
-        <MetricCard icon={Recycle} label="Tons of Waste Recycled" value={m.waste} suffix="t" delta="+42 wk" run={run} />
-        <MetricCard icon={Truck} label="Weekly Food Deliveries" value={m.deliveries} delta="+8% MoM" run={run} />
-        <MetricCard icon={Users} label="Youth Jobs Created" value={m.jobs} delta="+96 mo" run={run} />
-        <MetricCard icon={Cloud} label="CO₂e Avoided" value={m.co2} suffix="t" delta="verified" run={run} />
-        <MetricCard icon={Wallet} label="Producer Revenue" value={m.revenue} delta="+12% QoQ" run={run} money />
+        {isLoading
+          ? Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 animate-pulse rounded-xl bg-muted" />
+                  <div className="h-4 w-12 animate-pulse rounded bg-muted" />
+                </div>
+                <div className="mt-6 h-8 w-2/3 animate-pulse rounded bg-muted" />
+                <div className="mt-2 h-3 w-1/2 animate-pulse rounded bg-muted" />
+              </div>
+            ))
+          : (
+            <>
+              <MetricCard icon={Users} label="Households Connected" value={m.households} delta="+312 wk" run={run} />
+              <MetricCard icon={Recycle} label="Tons of Waste Recycled" value={m.waste} suffix="t" delta="+42 wk" run={run} />
+              <MetricCard icon={Truck} label="Weekly Food Deliveries" value={m.deliveries} delta="+8% MoM" run={run} />
+              <MetricCard icon={Users} label="Youth Jobs Created" value={m.jobs} delta="+96 mo" run={run} />
+              <MetricCard icon={Cloud} label="CO₂e Avoided" value={m.co2} suffix="t" delta="verified" run={run} />
+              <MetricCard icon={Wallet} label="Producer Revenue" value={m.revenue} delta="+12% QoQ" run={run} money />
+            </>
+          )}
       </div>
 
       <div className="mt-10 grid gap-4 lg:grid-cols-5">
@@ -171,6 +205,7 @@ export function ImpactDashboard() {
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Leaf className="h-3.5 w-3.5 text-moss" /> {zones.length} active counties
+              {isFetching && <span className="ml-1 text-[10px] uppercase tracking-wider text-clay">syncing…</span>}
             </div>
           </div>
           <div className="relative mt-5 aspect-[5/4] w-full overflow-hidden rounded-xl bg-gradient-to-br from-forest-deep/5 to-moss/10">
@@ -189,38 +224,73 @@ export function ImpactDashboard() {
               />
               {zones.map((z) => {
                 const active = selectedZone === z.id;
+                const hovered = hoveredZone === z.id;
+                const emphasised = active || hovered;
                 return (
                   <g
                     key={z.id}
                     onClick={() => setSelectedZone(z.id)}
-                    className="cursor-pointer"
+                    onMouseEnter={() => setHoveredZone(z.id)}
+                    onMouseLeave={() => setHoveredZone((p) => (p === z.id ? null : p))}
+                    onFocus={() => setHoveredZone(z.id)}
+                    onBlur={() => setHoveredZone((p) => (p === z.id ? null : p))}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`Focus ${z.name}`}
+                    aria-pressed={active}
+                    className="cursor-pointer outline-none focus-visible:[&>circle]:stroke-[oklch(0.55_0.115_45)]"
                   >
                     <circle
                       cx={z.x}
                       cy={z.y}
                       r={z.size / 8}
-                      fill={active ? "oklch(0.78 0.13 85 / 0.5)" : "oklch(0.78 0.13 85 / 0.25)"}
+                      fill={active ? "oklch(0.78 0.13 85 / 0.55)" : hovered ? "oklch(0.78 0.13 85 / 0.4)" : "oklch(0.78 0.13 85 / 0.25)"}
                       className="animate-pulse-ring"
                       style={{ transformOrigin: `${z.x}px ${z.y}px` }}
                     />
+                    {active && (
+                      <circle
+                        cx={z.x}
+                        cy={z.y}
+                        r={z.size / 6}
+                        fill="none"
+                        stroke="oklch(0.55 0.115 45 / 0.7)"
+                        strokeWidth="0.4"
+                        strokeDasharray="1 1"
+                      />
+                    )}
                     <circle
                       cx={z.x}
                       cy={z.y}
-                      r={active ? z.size / 10 : z.size / 14}
+                      r={active ? z.size / 9 : hovered ? z.size / 11 : z.size / 14}
                       fill={active ? "oklch(0.55 0.115 45)" : "oklch(0.78 0.13 85)"}
                       stroke={active ? "oklch(0.24 0.045 155)" : "transparent"}
                       strokeWidth="0.6"
+                      className="transition-all"
                     />
                     <text
                       x={z.x + 2}
                       y={z.y - 1.5}
-                      fontSize="2.4"
+                      fontSize={emphasised ? "2.8" : "2.4"}
                       fill="oklch(0.24 0.045 155)"
                       fontFamily="Inter"
-                      fontWeight={active ? 600 : 400}
+                      fontWeight={emphasised ? 600 : 400}
+                      className="pointer-events-none select-none"
                     >
                       {z.name}
                     </text>
+                    {hovered && !active && (
+                      <text
+                        x={z.x + 2}
+                        y={z.y + 2.2}
+                        fontSize="2"
+                        fill="oklch(0.34 0.07 152)"
+                        fontFamily="Inter"
+                        className="pointer-events-none select-none"
+                      >
+                        {z.households.toLocaleString()} households
+                      </text>
+                    )}
                   </g>
                 );
               })}

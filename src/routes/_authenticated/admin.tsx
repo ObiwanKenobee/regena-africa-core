@@ -157,12 +157,37 @@ function AdminPage() {
 
         {/* Zones */}
         <section>
-          <h2 className="font-display text-xl">Regenerative zones</h2>
-          <p className="text-sm text-muted-foreground">Edit live metrics. Updates broadcast to the dashboard.</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-xl">Regenerative zones</h2>
+              <p className="text-sm text-muted-foreground">Edit live metrics. Updates broadcast to the dashboard.</p>
+            </div>
+            <Button
+              size="sm"
+              variant="forest"
+              onClick={() => {
+                const id = window.prompt("Zone id (slug, e.g. machakos)")?.trim();
+                if (!id) return;
+                const name = window.prompt("Display name", id.charAt(0).toUpperCase() + id.slice(1)) ?? id;
+                upsertZoneFn({
+                  data: {
+                    id, name, x: 50, y: 50, size: 10,
+                    households: 0, waste: 0, deliveries: 0, jobs: 0, co2: 0, revenue: 0,
+                    status: "pilot",
+                  },
+                }).then(() => toast.success(`${name} created`)).catch((e) => toast.error(e.message));
+              }}
+            ><Plus className="h-3.5 w-3.5" /> New zone</Button>
+          </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {(zonesQ.data?.zones ?? []).map((z: any) => (
               <ZoneCard key={z.id} zone={z} save={(v) => upsertZoneFn({ data: v }).then(() => toast.success(`${v.name} saved`))} />
             ))}
+            {!zonesQ.data?.zones?.length && (
+              <div className="col-span-full rounded-2xl border border-dashed border-border bg-card/40 p-8 text-center text-sm text-muted-foreground">
+                No zones yet. Click "New zone" to seed the live map.
+              </div>
+            )}
           </div>
         </section>
 
