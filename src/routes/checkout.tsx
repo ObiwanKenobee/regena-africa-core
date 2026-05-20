@@ -118,7 +118,7 @@ function CheckoutPage() {
       clearInterval(interval);
       supabase.removeChannel(ch);
     };
-  }, [order?.id]);
+  }, [order?.id, retryNonce]);
 
   const startPay = async () => {
     if (!cart.length) return;
