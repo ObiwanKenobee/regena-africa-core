@@ -206,6 +206,9 @@ export function Marketplace() {
                 </div>
               ))}
             </div>
+            )}
+
+
 
             {cartCount > 0 && (
               <div className="mt-4 flex items-center justify-between rounded-xl border border-forest/30 bg-forest-deep/5 px-4 py-3 text-sm">
