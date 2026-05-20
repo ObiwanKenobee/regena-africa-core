@@ -133,7 +133,7 @@ export function ImpactDashboard() {
         >
           All Kenya
         </button>
-        {ZONES.map((z) => (
+        {zones.map((z) => (
           <button
             key={z.id}
             onClick={() => setSelectedZone(z.id)}
@@ -170,7 +170,7 @@ export function ImpactDashboard() {
               <div className="mt-1 font-display text-xl text-foreground">Kenya · Live Map</div>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Leaf className="h-3.5 w-3.5 text-moss" /> {ZONES.length} active counties
+              <Leaf className="h-3.5 w-3.5 text-moss" /> {zones.length} active counties
             </div>
           </div>
           <div className="relative mt-5 aspect-[5/4] w-full overflow-hidden rounded-xl bg-gradient-to-br from-forest-deep/5 to-moss/10">
@@ -187,7 +187,7 @@ export function ImpactDashboard() {
                 stroke="oklch(0.34 0.07 152 / 0.4)"
                 strokeWidth="0.4"
               />
-              {ZONES.map((z) => {
+              {zones.map((z) => {
                 const active = selectedZone === z.id;
                 return (
                   <g
@@ -238,7 +238,7 @@ export function ImpactDashboard() {
             </span>
           </div>
           <div className="mt-4 space-y-3">
-            {ZONES.map((z, i) => {
+            {zones.map((z, i) => {
               const pct = (z.households / 20000) * 100;
               const active = selectedZone === z.id;
               return (
