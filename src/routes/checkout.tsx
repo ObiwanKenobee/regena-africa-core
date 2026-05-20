@@ -59,6 +59,7 @@ function CheckoutPage() {
 
   const [pollError, setPollError] = useState<string | null>(null);
   const [realtimeOk, setRealtimeOk] = useState(false);
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     if (!order?.id) return;
