@@ -171,12 +171,27 @@ export function ImpactDashboard() {
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <MetricCard icon={Users} label="Households Connected" value={m.households} delta="+312 wk" run={run} />
-        <MetricCard icon={Recycle} label="Tons of Waste Recycled" value={m.waste} suffix="t" delta="+42 wk" run={run} />
-        <MetricCard icon={Truck} label="Weekly Food Deliveries" value={m.deliveries} delta="+8% MoM" run={run} />
-        <MetricCard icon={Users} label="Youth Jobs Created" value={m.jobs} delta="+96 mo" run={run} />
-        <MetricCard icon={Cloud} label="CO₂e Avoided" value={m.co2} suffix="t" delta="verified" run={run} />
-        <MetricCard icon={Wallet} label="Producer Revenue" value={m.revenue} delta="+12% QoQ" run={run} money />
+        {isLoading
+          ? Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 animate-pulse rounded-xl bg-muted" />
+                  <div className="h-4 w-12 animate-pulse rounded bg-muted" />
+                </div>
+                <div className="mt-6 h-8 w-2/3 animate-pulse rounded bg-muted" />
+                <div className="mt-2 h-3 w-1/2 animate-pulse rounded bg-muted" />
+              </div>
+            ))
+          : (
+            <>
+              <MetricCard icon={Users} label="Households Connected" value={m.households} delta="+312 wk" run={run} />
+              <MetricCard icon={Recycle} label="Tons of Waste Recycled" value={m.waste} suffix="t" delta="+42 wk" run={run} />
+              <MetricCard icon={Truck} label="Weekly Food Deliveries" value={m.deliveries} delta="+8% MoM" run={run} />
+              <MetricCard icon={Users} label="Youth Jobs Created" value={m.jobs} delta="+96 mo" run={run} />
+              <MetricCard icon={Cloud} label="CO₂e Avoided" value={m.co2} suffix="t" delta="verified" run={run} />
+              <MetricCard icon={Wallet} label="Producer Revenue" value={m.revenue} delta="+12% QoQ" run={run} money />
+            </>
+          )}
       </div>
 
       <div className="mt-10 grid gap-4 lg:grid-cols-5">
