@@ -57,23 +57,66 @@ function CheckoutPage() {
     });
   }, [nav]);
 
+  const [pollError, setPollError] = useState<string | null>(null);
+  const [realtimeOk, setRealtimeOk] = useState(false);
+
   useEffect(() => {
     if (!order?.id) return;
+    setPollError(null);
+    setRealtimeOk(false);
+
+    const applyUpdate = (o: Partial<LiveOrder>) => {
+      setOrder((prev) => {
+        if (!prev) return prev;
+        if (o.status && o.status !== prev.status) {
+          if (o.status === "paid") toast.success("M-Pesa payment confirmed");
+          if (o.status === "delivered") toast.success("Delivered!");
+          if (o.status === "failed") toast.error(o.failure_reason || "Payment failed");
+        }
+        return { ...prev, ...o };
+      });
+    };
+
     const ch = supabase
       .channel(`order-${order.id}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "orders", filter: `id=eq.${order.id}` },
-        (payload) => {
-          const o = payload.new as LiveOrder;
-          setOrder((prev) => (prev ? { ...prev, ...o } : prev));
-          if (o.status === "paid") toast.success("M-Pesa payment confirmed");
-          if (o.status === "delivered") toast.success("Delivered!");
-          if (o.status === "failed") toast.error(o.failure_reason || "Payment failed");
-        },
+        (payload) => applyUpdate(payload.new as LiveOrder),
       )
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") setRealtimeOk(true);
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") setRealtimeOk(false);
+      });
+
+    // Polling fallback — always runs alongside realtime so missed events recover.
+    let cancelled = false;
+    const poll = async () => {
+      if (cancelled || !order?.id) return;
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id,status,progress,total,rider,route,mpesa_receipt,failure_reason")
+        .eq("id", order.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error) {
+        setPollError(error.message);
+        return;
+      }
+      if (!data) {
+        setPollError("Order not found — it may have been cancelled.");
+        return;
+      }
+      setPollError(null);
+      applyUpdate(data as LiveOrder);
+    };
+    poll();
+    const interval = setInterval(poll, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      supabase.removeChannel(ch);
+    };
   }, [order?.id]);
 
   const startPay = async () => {
