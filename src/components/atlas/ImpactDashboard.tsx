@@ -70,21 +70,23 @@ export function ImpactDashboard() {
   const [run, setRun] = useState(false);
   const { selectedZone, setSelectedZone } = useAtlas();
   const fetchZones = useServerFn(getZones);
-  const { data } = useQuery({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["public-zones"],
     queryFn: () => fetchZones(),
     staleTime: 30_000,
+    retry: 2,
   });
-  const zones: Zone[] =
-    data?.zones && data.zones.length > 0
-      ? data.zones.map((z) => ({
-          ...z,
-          waste: Number(z.waste),
-          co2: Number(z.co2),
-          revenue: Number(z.revenue),
-          status: (z.status as Zone["status"]) ?? "pilot",
-        }))
-      : ZONES;
+  const liveZones: Zone[] =
+    data?.zones?.map((z) => ({
+      ...z,
+      waste: Number(z.waste),
+      co2: Number(z.co2),
+      revenue: Number(z.revenue),
+      status: (z.status as Zone["status"]) ?? "pilot",
+    })) ?? [];
+  const zones: Zone[] = liveZones.length > 0 ? liveZones : ZONES;
+  const usingFallback = liveZones.length === 0 && !isLoading;
+  const [hoveredZone, setHoveredZone] = useState<string | null>(null);
   const zone = zones.find((z) => z.id === selectedZone) ?? zones[0];
 
   // Network totals
