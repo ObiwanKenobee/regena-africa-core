@@ -32,23 +32,23 @@ export function Marketplace() {
   const { addToCart, cart } = useAtlas();
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
   const fetchListings = useServerFn(getListings);
-  const { data } = useQuery({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["public-listings"],
     queryFn: () => fetchListings(),
     staleTime: 30_000,
+    retry: 2,
   });
-  const listings: Listing[] =
-    data?.listings && data.listings.length > 0
-      ? data.listings.map((l) => ({
-          id: l.id,
-          name: l.name,
-          farm: l.farm,
-          price: Number(l.price),
-          unit: l.unit,
-          image: l.image ?? null,
-          tag: "Live",
-        }))
-      : FALLBACK;
+  const liveListings: Listing[] =
+    data?.listings?.map((l) => ({
+      id: l.id,
+      name: l.name,
+      farm: l.farm,
+      price: Number(l.price),
+      unit: l.unit,
+      image: l.image ?? null,
+      tag: "Live",
+    })) ?? [];
+  const listings: Listing[] = liveListings.length > 0 ? liveListings : FALLBACK;
 
 
   return (
