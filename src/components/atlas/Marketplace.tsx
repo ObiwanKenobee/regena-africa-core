@@ -134,16 +134,18 @@ export function Marketplace() {
                 >
                   <div className="relative aspect-[4/3] overflow-hidden bg-muted">
                     <img
-                      src={produceImg}
+                      src={l.image || produceImg}
                       alt={l.name}
                       loading="lazy"
                       width={600}
                       height={450}
                       className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                     />
-                    <span className="absolute left-2 top-2 rounded-md bg-bone/90 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-forest-deep">
-                      {l.tag}
-                    </span>
+                    {l.tag && (
+                      <span className="absolute left-2 top-2 rounded-md bg-bone/90 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-forest-deep">
+                        {l.tag}
+                      </span>
+                    )}
                   </div>
                   <div className="p-3.5">
                     <div className="flex items-start justify-between gap-2">
