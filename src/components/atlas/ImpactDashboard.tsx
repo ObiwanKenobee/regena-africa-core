@@ -124,6 +124,23 @@ export function ImpactDashboard() {
         description="Click any zone on the map to see what's flowing through that county right now. Every kilogram, kilowatt, and shilling is tracked, verified, and shared back."
       />
 
+      {isError && (
+        <div className="mt-6 flex items-center justify-between rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-2 text-xs text-destructive">
+          <span>
+            Couldn't load live zone metrics ({error instanceof Error ? error.message : "network error"}). Showing
+            last known network.
+          </span>
+          <button onClick={() => refetch()} className="font-medium underline">
+            Retry
+          </button>
+        </div>
+      )}
+      {usingFallback && !isError && (
+        <div className="mt-6 rounded-xl border border-border bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
+          No zones configured yet — showing demo network. Add zones from the Admin console to populate this map.
+        </div>
+      )}
+
       <div className="mt-8 flex flex-wrap items-center gap-2">
         <button
           onClick={() => setSelectedZone("all")}
