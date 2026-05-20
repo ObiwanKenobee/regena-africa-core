@@ -3,11 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, Wifi, WifiOff, ShieldCheck } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { AtlasMark } from "./AtlasMark";
 import { useAtlas } from "@/lib/atlas-store";
 import { supabase } from "@/integrations/supabase/client";
-import { checkIsAdmin } from "@/lib/admin.functions";
 
 const links = [
   { href: "#impact", label: "Impact" },
