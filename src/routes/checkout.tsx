@@ -51,14 +51,12 @@ function CheckoutPage() {
   const [stage, setStage] = useState<"cart" | "stk" | "confirmed">("cart");
   const [order, setOrder] = useState<LiveOrder | null>(null);
 
-  // Require auth — bounce to /auth if no session
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) nav({ to: "/auth", search: { redirect: "/checkout", mode: "signin" } });
     });
   }, [nav]);
 
-  // Subscribe to this order's live status
   useEffect(() => {
     if (!order?.id) return;
     const ch = supabase
@@ -99,7 +97,6 @@ function CheckoutPage() {
         mpesa_receipt: null,
         failure_reason: null,
       });
-      // Fire the mock Daraja callback (in real Daraja, Safaricom fires this)
       await fetch("/api/public/mpesa/simulate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -119,8 +116,7 @@ function CheckoutPage() {
     }
   };
 
-  const trackedOrder = order;
-
+  const flowIdx = order ? FLOW.indexOf(order.status as OrderStatus) : -1;
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -195,40 +191,46 @@ function CheckoutPage() {
             )}
           </div>
 
-          {/* In-flight orders */}
-          {orders.length > 0 && (
+          {order && (
             <div className="mt-10">
               <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                Active deliveries
+                Active delivery
               </div>
               <h2 className="font-display text-xl tracking-tight text-foreground">Track in real time</h2>
-              <div className="mt-4 space-y-3">
-                {orders.map((o) => (
-                  <div key={o.id} className="rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-soft)]">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <div className="font-mono text-[11px] text-muted-foreground">{o.id}</div>
-                        <div className="text-sm font-medium text-foreground">
-                          KSh {o.total.toLocaleString()} · {o.items.length} items
-                        </div>
-                        <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                          <Truck className="h-3 w-3" /> {o.rider} · {o.route}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-md bg-gold/15 px-2 py-0.5 text-[11px] font-medium text-clay">
-                          {statusLabel(o.status)}
-                        </span>
-                        {o.status !== "delivered" && (
-                          <Button variant="outline" size="sm" onClick={() => advanceOrder(o.id)}>
-                            Advance
-                          </Button>
-                        )}
-                      </div>
+              <div className="mt-4 rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-soft)]">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="font-mono text-[11px] text-muted-foreground">{order.id}</div>
+                    <div className="text-sm font-medium text-foreground">
+                      KSh {order.total.toLocaleString()}
                     </div>
+                    {(order.rider || order.route) && (
+                      <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                        <Truck className="h-3 w-3" /> {order.rider ?? "Awaiting rider"}
+                        {order.route ? ` · ${order.route}` : ""}
+                      </div>
+                    )}
+                    {order.mpesa_receipt && (
+                      <div className="mt-0.5 text-[11px] font-mono text-moss">
+                        Receipt: {order.mpesa_receipt}
+                      </div>
+                    )}
+                  </div>
+                  <span className="rounded-md bg-gold/15 px-2 py-0.5 text-[11px] font-medium text-clay">
+                    {FLOW.includes(order.status as OrderStatus)
+                      ? statusLabel(order.status as OrderStatus)
+                      : order.status === "stk_sent"
+                        ? "Awaiting M-Pesa PIN"
+                        : order.status === "failed"
+                          ? "Failed"
+                          : order.status}
+                  </span>
+                </div>
+                {flowIdx >= 0 && (
+                  <>
                     <div className="mt-3 flex items-center gap-2">
                       {FLOW.map((s, i) => {
-                        const reached = FLOW.indexOf(o.status) >= i;
+                        const reached = flowIdx >= i;
                         return (
                           <div key={s} className="flex flex-1 items-center gap-2">
                             <div
@@ -250,14 +252,19 @@ function CheckoutPage() {
                         <span key={s} className="text-center">{statusLabel(s)}</span>
                       ))}
                     </div>
-                  </div>
-                ))}
+                  </>
+                )}
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-forest to-moss transition-all duration-1000"
+                    style={{ width: `${order.progress}%` }}
+                  />
+                </div>
               </div>
             </div>
           )}
         </section>
 
-        {/* Pay panel */}
         <aside className="lg:col-span-2">
           <div className="sticky top-4 overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-forest-deep to-forest p-6 text-bone shadow-[var(--shadow-elevated)]">
             <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-gold-soft">
@@ -265,7 +272,7 @@ function CheckoutPage() {
             </div>
             <div className="mt-6 text-xs text-bone/70">Amount</div>
             <div className="font-display text-4xl tabular-nums">
-              KSh {cartTotal.toLocaleString()}
+              KSh {(order?.total ?? cartTotal).toLocaleString()}
             </div>
 
             <div className="mt-6 space-y-3">
@@ -307,22 +314,24 @@ function CheckoutPage() {
               </div>
             )}
 
-            {stage === "confirmed" && trackedOrder && (
+            {stage === "confirmed" && order && (
               <div className="mt-6 rounded-xl bg-bone p-4 text-ink">
                 <div className="flex items-center gap-2 text-sm font-medium text-forest">
-                  <CheckCircle2 className="h-4 w-4" /> Paid · {trackedOrder.id}
+                  <CheckCircle2 className="h-4 w-4" /> Order placed · {order.id.slice(0, 8)}
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {trackedOrder.rider} is picking up at {trackedOrder.route.split(" → ")[0]}.
+                  {order.status === "stk_sent"
+                    ? "Awaiting M-Pesa confirmation…"
+                    : `${order.rider ?? "A rider"} is handling your delivery.`}
                 </p>
                 <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
-                  <MapPin className="h-3 w-3" /> Track below — updates every few seconds.
+                  <MapPin className="h-3 w-3" /> Updates stream live — no refresh needed.
                 </div>
                 <Button
                   variant="forest"
                   size="sm"
                   className="mt-3 w-full"
-                  onClick={() => setStage("cart")}
+                  onClick={() => { setStage("cart"); setOrder(null); }}
                 >
                   Done <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
