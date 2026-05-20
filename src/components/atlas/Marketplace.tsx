@@ -126,7 +126,30 @@ export function Marketplace() {
 
           {/* Listings */}
           <div className="p-5 lg:col-span-6">
+            {isError && (
+              <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                Couldn't load live listings ({error instanceof Error ? error.message : "network error"}). Showing sample produce.
+                <button onClick={() => refetch()} className="ml-2 font-medium underline">Retry</button>
+              </div>
+            )}
+            {isLoading ? (
+              <div className="grid gap-3 sm:grid-cols-2" aria-busy="true" aria-label="Loading listings">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="overflow-hidden rounded-xl border border-border bg-background">
+                    <div className="aspect-[4/3] animate-pulse bg-muted" />
+                    <div className="space-y-2 p-3.5">
+                      <div className="h-3 w-3/4 animate-pulse rounded bg-muted" />
+                      <div className="h-2.5 w-1/2 animate-pulse rounded bg-muted" />
+                      <div className="mt-3 h-2.5 w-1/3 animate-pulse rounded bg-muted" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
             <div className="grid gap-3 sm:grid-cols-2">
+              {isFetching && !isLoading && (
+                <div className="col-span-full -mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Refreshing…</div>
+              )}
               {listings.map((l) => (
                 <div
                   key={l.id}
