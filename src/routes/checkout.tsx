@@ -262,7 +262,7 @@ function CheckoutPage() {
                     <span className="font-medium">{order.status}</span>.
                   </span>
                   <button
-                    onClick={() => { setOrder((p) => (p ? { ...p } : p)); }}
+                    onClick={() => { setPollError(null); setRetryNonce((n) => n + 1); }}
                     className="font-medium underline"
                   >
                     Retry
