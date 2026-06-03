@@ -1,9 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { Home, Sprout, Store, Bike, ArrowRight, Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Home, Sprout, Store, Bike, ArrowRight, Check, Loader2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useAtlas, type Role } from "@/lib/atlas-store";
 import { AtlasMark } from "@/components/atlas/AtlasMark";
+import { supabase } from "@/integrations/supabase/client";
+import { upsertProfileRole } from "@/lib/atlas-cloud.functions";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
@@ -64,14 +69,40 @@ const ROLES: {
 function OnboardingPage() {
   const navigate = useNavigate();
   const { role, setRole } = useAtlas();
+  const upsertFn = useServerFn(upsertProfileRole);
   const [selected, setSelected] = useState<Role | null>(role);
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [zone, setZone] = useState("Nairobi");
+  const [userId, setUserId] = useState<string | null>(null);
 
-  const finish = () => {
-    if (selected) setRole(selected);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setUserId(data.session?.user.id ?? null));
+  }, []);
+
+  const save = useMutation({
+    mutationFn: () =>
+      upsertFn({
+        data: {
+          preferred_role: selected!,
+          full_name: name.trim() || undefined,
+          phone: phone.trim() || undefined,
+        },
+      }),
+  });
+
+  const finish = async () => {
+    if (!selected) return;
+    setRole(selected);
+    if (userId) {
+      try {
+        await save.mutateAsync();
+        toast.success("Profile saved");
+      } catch (e: any) {
+        toast.error(e?.message ?? "Could not save profile");
+      }
+    }
     navigate({ to: "/dashboard" });
   };
 
@@ -203,8 +234,8 @@ function OnboardingPage() {
               <Button variant="ghost" className="text-bone hover:bg-white/10" onClick={() => setStep(0)}>
                 Back
               </Button>
-              <Button variant="gold" size="lg" onClick={finish}>
-                Open my dashboard <ArrowRight className="h-4 w-4" />
+              <Button variant="gold" size="lg" onClick={finish} disabled={save.isPending}>
+                {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Open my dashboard <ArrowRight className="h-4 w-4" /></>}
               </Button>
             </div>
           </div>
