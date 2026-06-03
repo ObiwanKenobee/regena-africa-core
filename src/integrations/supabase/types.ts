@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      circle_contributions: {
+        Row: {
+          amount: number
+          circle_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          circle_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          circle_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "circle_contributions_circle_id_fkey"
+            columns: ["circle_id"]
+            isOneToOne: false
+            referencedRelation: "savings_circles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listings: {
         Row: {
           active: boolean
@@ -192,6 +224,113 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_votes: {
+        Row: {
+          created_at: string
+          id: string
+          proposal_id: string
+          user_id: string
+          vote: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          proposal_id: string
+          user_id: string
+          vote: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          proposal_id?: string
+          user_id?: string
+          vote?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_votes_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposals: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          no_count: number
+          quorum_pct: number
+          status: string
+          title: string
+          updated_at: string
+          yes_count: number
+          zone_id: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          no_count?: number
+          quorum_pct?: number
+          status?: string
+          title: string
+          updated_at?: string
+          yes_count?: number
+          zone_id?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          no_count?: number
+          quorum_pct?: number
+          status?: string
+          title?: string
+          updated_at?: string
+          yes_count?: number
+          zone_id?: string | null
+        }
+        Relationships: []
+      }
+      savings_circles: {
+        Row: {
+          balance: number
+          contribution_amount: number
+          contribution_period: string
+          created_at: string
+          id: string
+          name: string
+          target: number
+          zone_id: string | null
+        }
+        Insert: {
+          balance?: number
+          contribution_amount?: number
+          contribution_period?: string
+          created_at?: string
+          id?: string
+          name: string
+          target?: number
+          zone_id?: string | null
+        }
+        Update: {
+          balance?: number
+          contribution_amount?: number
+          contribution_period?: string
+          created_at?: string
+          id?: string
+          name?: string
+          target?: number
+          zone_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -209,6 +348,57 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          id: string
+          kind: string
+          memo: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category?: string
+          created_at?: string
+          id?: string
+          kind: string
+          memo?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          memo?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wallets: {
+        Row: {
+          balance: number
+          currency: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          currency?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          currency?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
