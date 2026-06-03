@@ -1,9 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { Home, Sprout, Store, Bike, ArrowRight, Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Home, Sprout, Store, Bike, ArrowRight, Check, Loader2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useAtlas, type Role } from "@/lib/atlas-store";
 import { AtlasMark } from "@/components/atlas/AtlasMark";
+import { supabase } from "@/integrations/supabase/client";
+import { upsertProfileRole } from "@/lib/atlas-cloud.functions";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
