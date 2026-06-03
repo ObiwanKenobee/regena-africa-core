@@ -69,14 +69,40 @@ const ROLES: {
 function OnboardingPage() {
   const navigate = useNavigate();
   const { role, setRole } = useAtlas();
+  const upsertFn = useServerFn(upsertProfileRole);
   const [selected, setSelected] = useState<Role | null>(role);
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [zone, setZone] = useState("Nairobi");
+  const [userId, setUserId] = useState<string | null>(null);
 
-  const finish = () => {
-    if (selected) setRole(selected);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setUserId(data.session?.user.id ?? null));
+  }, []);
+
+  const save = useMutation({
+    mutationFn: () =>
+      upsertFn({
+        data: {
+          preferred_role: selected!,
+          full_name: name.trim() || undefined,
+          phone: phone.trim() || undefined,
+        },
+      }),
+  });
+
+  const finish = async () => {
+    if (!selected) return;
+    setRole(selected);
+    if (userId) {
+      try {
+        await save.mutateAsync();
+        toast.success("Profile saved");
+      } catch (e: any) {
+        toast.error(e?.message ?? "Could not save profile");
+      }
+    }
     navigate({ to: "/dashboard" });
   };
 
