@@ -234,8 +234,8 @@ function OnboardingPage() {
               <Button variant="ghost" className="text-bone hover:bg-white/10" onClick={() => setStep(0)}>
                 Back
               </Button>
-              <Button variant="gold" size="lg" onClick={finish}>
-                Open my dashboard <ArrowRight className="h-4 w-4" />
+              <Button variant="gold" size="lg" onClick={finish} disabled={save.isPending}>
+                {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Open my dashboard <ArrowRight className="h-4 w-4" /></>}
               </Button>
             </div>
           </div>
