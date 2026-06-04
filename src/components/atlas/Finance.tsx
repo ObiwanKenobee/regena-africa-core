@@ -258,3 +258,17 @@ function FinanceInner() {
     </Section>
   );
 }
+
+export function Finance() {
+  return (
+    <OnboardingGate
+      id="finance"
+      eyebrow="Finance & Micro-economy"
+      title={<>Money that <span className="text-gradient-forest">stays in the neighborhood.</span></>}
+      description="Wallets, micro-payments, SACCO savings, and regenerative credits — all settled in shillings and accessible from any phone."
+    >
+      <FinanceInner />
+    </OnboardingGate>
+  );
+}
+
