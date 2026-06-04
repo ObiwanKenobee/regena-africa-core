@@ -16,6 +16,7 @@ import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedAdminEconomyRouteImport } from './routes/_authenticated/admin-economy'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as ApiPublicMpesaSimulateRouteImport } from './routes/api/public/mpesa/simulate'
 import { Route as ApiPublicMpesaCallbackRouteImport } from './routes/api/public/mpesa/callback'
@@ -54,6 +55,12 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminEconomyRoute =
+  AuthenticatedAdminEconomyRouteImport.update({
+    id: '/admin-economy',
+    path: '/admin-economy',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -78,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/foodbox': typeof FoodboxRoute
   '/onboarding': typeof OnboardingRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/admin-economy': typeof AuthenticatedAdminEconomyRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
   '/api/public/mpesa/simulate': typeof ApiPublicMpesaSimulateRoute
 }
@@ -89,6 +97,7 @@ export interface FileRoutesByTo {
   '/foodbox': typeof FoodboxRoute
   '/onboarding': typeof OnboardingRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/admin-economy': typeof AuthenticatedAdminEconomyRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
   '/api/public/mpesa/simulate': typeof ApiPublicMpesaSimulateRoute
 }
@@ -102,6 +111,7 @@ export interface FileRoutesById {
   '/foodbox': typeof FoodboxRoute
   '/onboarding': typeof OnboardingRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/admin-economy': typeof AuthenticatedAdminEconomyRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
   '/api/public/mpesa/simulate': typeof ApiPublicMpesaSimulateRoute
 }
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/foodbox'
     | '/onboarding'
     | '/admin'
+    | '/admin-economy'
     | '/api/public/mpesa/callback'
     | '/api/public/mpesa/simulate'
   fileRoutesByTo: FileRoutesByTo
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/foodbox'
     | '/onboarding'
     | '/admin'
+    | '/admin-economy'
     | '/api/public/mpesa/callback'
     | '/api/public/mpesa/simulate'
   id:
@@ -138,6 +150,7 @@ export interface FileRouteTypes {
     | '/foodbox'
     | '/onboarding'
     | '/_authenticated/admin'
+    | '/_authenticated/admin-economy'
     | '/api/public/mpesa/callback'
     | '/api/public/mpesa/simulate'
   fileRoutesById: FileRoutesById
@@ -205,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin-economy': {
+      id: '/_authenticated/admin-economy'
+      path: '/admin-economy'
+      fullPath: '/admin-economy'
+      preLoaderRoute: typeof AuthenticatedAdminEconomyRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
       path: '/admin'
@@ -231,10 +251,12 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAdminEconomyRoute: typeof AuthenticatedAdminEconomyRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAdminEconomyRoute: AuthenticatedAdminEconomyRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -255,3 +277,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
