@@ -12,6 +12,7 @@ import {
 } from "@/lib/atlas-cloud.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { OnboardingGate } from "./OnboardingGate";
 
 type Proposal = {
   id: string;
