@@ -21,8 +21,9 @@ import {
 } from "@/lib/atlas-cloud.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { OnboardingGate } from "./OnboardingGate";
 
-export function Finance() {
+function FinanceInner() {
   const qc = useQueryClient();
   const walletFn = useServerFn(getMyWallet);
   const topUpFn = useServerFn(topUpWallet);
