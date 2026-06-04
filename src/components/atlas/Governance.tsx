@@ -25,7 +25,7 @@ type Proposal = {
   zone_id: string | null;
 };
 
-export function Governance() {
+function GovernanceInner() {
   const qc = useQueryClient();
   const proposalsFn = useServerFn(getProposals);
   const voteFn = useServerFn(voteOnProposal);
