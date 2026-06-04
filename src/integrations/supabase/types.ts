@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_actions: {
+        Row: {
+          action: string
+          actor_id: string
+          amount: number | null
+          created_at: string
+          id: string
+          memo: string | null
+          metadata: Json | null
+          target_id: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          amount?: number | null
+          created_at?: string
+          id?: string
+          memo?: string | null
+          metadata?: Json | null
+          target_id?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          amount?: number | null
+          created_at?: string
+          id?: string
+          memo?: string | null
+          metadata?: Json | null
+          target_id?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       circle_contributions: {
         Row: {
           amount: number

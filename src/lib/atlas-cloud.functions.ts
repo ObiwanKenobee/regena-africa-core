@@ -298,3 +298,82 @@ export const contributeToCircle = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ---- Onboarding gating ----
+
+export const getOnboardingStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data } = await supabase
+      .from("profiles")
+      .select("full_name, phone, preferred_role")
+      .eq("id", userId)
+      .maybeSingle();
+    const complete = !!(data?.full_name && data?.phone && data?.preferred_role);
+    return { complete, profile: data ?? null };
+  });
+
+// ---- Zone impact aggregator ----
+
+export const getZoneImpact = createServerFn({ method: "GET" }).handler(async () => {
+  const [zonesRes, proposalsRes, circlesRes, ordersRes, contribsRes] = await Promise.all([
+    supabaseAdmin.from("zones").select("id, name, status, households"),
+    supabaseAdmin.from("proposals").select("zone_id, status, yes_count, no_count"),
+    supabaseAdmin.from("savings_circles").select("zone_id, balance"),
+    supabaseAdmin.from("orders").select("zone_id, total, status"),
+    supabaseAdmin.from("circle_contributions").select("amount, created_at, circle_id"),
+  ]);
+
+  const zones = zonesRes.data ?? [];
+  const byZone = new Map<string, {
+    id: string; name: string; status: string; households: number;
+    proposals: number; votes: number;
+    circle_balance: number;
+    order_count: number; order_value: number;
+  }>();
+  for (const z of zones) {
+    byZone.set(z.id, {
+      id: z.id,
+      name: z.name,
+      status: z.status,
+      households: z.households ?? 0,
+      proposals: 0,
+      votes: 0,
+      circle_balance: 0,
+      order_count: 0,
+      order_value: 0,
+    });
+  }
+  for (const p of proposalsRes.data ?? []) {
+    if (!p.zone_id) continue;
+    const e = byZone.get(p.zone_id);
+    if (!e) continue;
+    e.proposals += 1;
+    e.votes += (p.yes_count ?? 0) + (p.no_count ?? 0);
+  }
+  for (const c of circlesRes.data ?? []) {
+    if (!c.zone_id) continue;
+    const e = byZone.get(c.zone_id);
+    if (!e) continue;
+    e.circle_balance += Number(c.balance ?? 0);
+  }
+  for (const o of ordersRes.data ?? []) {
+    if (!o.zone_id) continue;
+    const e = byZone.get(o.zone_id);
+    if (!e) continue;
+    e.order_count += 1;
+    if (o.status === "paid" || o.status === "delivered" || o.status === "in_transit") {
+      e.order_value += Number(o.total ?? 0);
+    }
+  }
+  const totals = {
+    proposals: proposalsRes.data?.length ?? 0,
+    votes: (proposalsRes.data ?? []).reduce((s, p) => s + (p.yes_count ?? 0) + (p.no_count ?? 0), 0),
+    circle_balance: (circlesRes.data ?? []).reduce((s, c) => s + Number(c.balance ?? 0), 0),
+    contributions: (contribsRes.data ?? []).reduce((s, c) => s + Number(c.amount ?? 0), 0),
+    order_value: (ordersRes.data ?? []).reduce((s, o) => s + Number(o.total ?? 0), 0),
+  };
+  return { zones: Array.from(byZone.values()), totals };
+});
+

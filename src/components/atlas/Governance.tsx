@@ -12,6 +12,7 @@ import {
 } from "@/lib/atlas-cloud.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { OnboardingGate } from "./OnboardingGate";
 
 type Proposal = {
   id: string;
@@ -24,7 +25,7 @@ type Proposal = {
   zone_id: string | null;
 };
 
-export function Governance() {
+function GovernanceInner() {
   const qc = useQueryClient();
   const proposalsFn = useServerFn(getProposals);
   const voteFn = useServerFn(voteOnProposal);
