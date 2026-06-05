@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Wifi, WifiOff, CheckCheck, ArrowLeft } from "lucide-react";
+import { Wifi, WifiOff, CheckCheck, ArrowLeft, RefreshCw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAtlas, statusLabel, type OrderStatus } from "@/lib/atlas-store";
 import { AtlasMark } from "@/components/atlas/AtlasMark";
