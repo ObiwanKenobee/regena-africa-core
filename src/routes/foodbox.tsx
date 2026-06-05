@@ -71,6 +71,9 @@ function FoodboxPage() {
   const [liveOrder, setLiveOrder] = useState<LiveOrder | null>(null);
   const [phase, setPhase] = useState<"choose" | "address" | "pay" | "tracking">("choose");
   const [selectedBox, setSelectedBox] = useState<typeof BOXES[number] | null>(null);
+  const [conn, setConn] = useState<"idle" | "connecting" | "live" | "error">("idle");
+  const [retryToken, setRetryToken] = useState(0);
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
