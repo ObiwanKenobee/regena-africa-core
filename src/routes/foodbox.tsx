@@ -91,17 +91,20 @@ function FoodboxPage() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [msgs]);
 
-  // Subscribe to persisted order status via Supabase Realtime (authed orders only)
+  // Subscribe to persisted order status via Supabase Realtime (authed orders only).
+  // Tracks channel state so the UI can show connecting / live / error and offer retry.
   useEffect(() => {
     if (!liveOrder || liveOrder.source !== "db") return;
     const orderId = liveOrder.id;
+    setConn("connecting");
     const ch = supabase
-      .channel(`order-${orderId}`)
+      .channel(`order-${orderId}-${retryToken}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "orders", filter: `id=eq.${orderId}` },
         (payload) => {
           const row = payload.new as Record<string, unknown>;
+          setLastSyncedAt(Date.now());
           setLiveOrder((prev) =>
             prev
               ? {
@@ -118,11 +121,18 @@ function FoodboxPage() {
           );
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          setConn("live");
+          setLastSyncedAt(Date.now());
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          setConn("error");
+        }
+      });
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [liveOrder?.id, liveOrder?.source]);
+  }, [liveOrder?.id, liveOrder?.source, retryToken]);
 
   // SMS-style delivery updates: append a chat msg whenever tracked order status changes
   const lastStatusRef = useRef<string | null>(null);
