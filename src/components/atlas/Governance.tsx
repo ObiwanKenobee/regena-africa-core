@@ -1,5 +1,5 @@
 import { Section, SectionHeader } from "./Section";
-import { Vote, FileText, Landmark, CheckCircle2, Loader2, Plus } from "lucide-react";
+import { Vote, FileText, Landmark, CheckCircle2, Loader2, Plus, History, Sparkles, Gavel } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +9,7 @@ import {
   voteOnProposal,
   createProposal,
   getMyVotes,
+  getProposalAuditTrail,
 } from "@/lib/atlas-cloud.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
