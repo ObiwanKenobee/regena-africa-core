@@ -15,7 +15,7 @@ import { getZones, getListings } from "@/lib/atlas-cloud.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { AtlasMark } from "@/components/atlas/AtlasMark";
-import { ShieldCheck, Trash2, Plus, LogOut } from "lucide-react";
+import { ShieldCheck, Trash2, Plus, LogOut, Landmark } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Admin — Atlas Sanctum" }] }),
