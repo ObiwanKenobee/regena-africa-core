@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Wifi, WifiOff, CheckCheck, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAtlas, statusLabel } from "@/lib/atlas-store";
+import { useAtlas, statusLabel, type OrderStatus } from "@/lib/atlas-store";
 import { AtlasMark } from "@/components/atlas/AtlasMark";
+import { supabase } from "@/integrations/supabase/client";
+import { createWhatsAppOrder } from "@/lib/atlas-cloud.functions";
 
 export const Route = createFileRoute("/foodbox")({
   head: () => ({
@@ -27,11 +30,36 @@ const BOXES = [
   { id: "protein", name: "Protein add-on", price: 480, desc: "Eggs · beans · tilapia" },
 ];
 
+const PROGRESS_BY_STATUS: Record<string, number> = {
+  pending: 5,
+  stk_sent: 15,
+  paid: 30,
+  preparing: 45,
+  picked: 65,
+  in_transit: 85,
+  delivered: 100,
+  failed: 0,
+  cancelled: 0,
+};
+
 const now = () =>
   new Date().toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit", hour12: false });
 
+type LiveOrder = {
+  id: string;
+  status: string;
+  progress: number;
+  rider: string | null;
+  route: string | null;
+  total: number;
+  source: "db" | "local";
+};
+
 function FoodboxPage() {
   const { placeOrder, advanceOrder, orders, lowBandwidth, setLowBandwidth } = useAtlas();
+  const createOrderFn = useServerFn(createWhatsAppOrder);
+
+  const [userId, setUserId] = useState<string | null>(null);
   const [msgs, setMsgs] = useState<Msg[]>([
     {
       from: "atlas",
@@ -40,36 +68,137 @@ function FoodboxPage() {
     },
   ]);
   const [draft, setDraft] = useState("");
-  const [orderId, setOrderId] = useState<string | null>(null);
+  const [liveOrder, setLiveOrder] = useState<LiveOrder | null>(null);
   const [phase, setPhase] = useState<"choose" | "address" | "pay" | "tracking">("choose");
   const [selectedBox, setSelectedBox] = useState<typeof BOXES[number] | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  const order = orders.find((o) => o.id === orderId);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setUserId(data.session?.user.id ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) =>
+      setUserId(s?.user.id ?? null),
+    );
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  // Local-store fallback for guests
+  const localOrder = orders.find((o) => o.id === liveOrder?.id);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [msgs]);
 
+  // Subscribe to persisted order status via Supabase Realtime (authed orders only)
+  useEffect(() => {
+    if (!liveOrder || liveOrder.source !== "db") return;
+    const orderId = liveOrder.id;
+    const ch = supabase
+      .channel(`order-${orderId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "orders", filter: `id=eq.${orderId}` },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>;
+          setLiveOrder((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: String(row.status ?? prev.status),
+                  progress:
+                    typeof row.progress === "number"
+                      ? row.progress
+                      : PROGRESS_BY_STATUS[String(row.status ?? prev.status)] ?? prev.progress,
+                  rider: (row.rider as string | null) ?? prev.rider,
+                  route: (row.route as string | null) ?? prev.route,
+                }
+              : prev,
+          );
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [liveOrder?.id, liveOrder?.source]);
+
   // SMS-style delivery updates: append a chat msg whenever tracked order status changes
   const lastStatusRef = useRef<string | null>(null);
+  const trackedStatus = liveOrder?.status ?? localOrder?.status ?? null;
+  const trackedRider = liveOrder?.rider ?? localOrder?.rider ?? "Brian K.";
+  const trackedRoute = liveOrder?.route ?? localOrder?.route ?? "Atlas Hub";
+  const trackedId = liveOrder?.id ?? localOrder?.id ?? "";
+
   useEffect(() => {
-    if (!order) return;
-    if (lastStatusRef.current === order.status) return;
-    lastStatusRef.current = order.status;
+    if (!trackedStatus || !trackedId) return;
+    if (lastStatusRef.current === trackedStatus) return;
+    lastStatusRef.current = trackedStatus;
     const lines: Record<string, string> = {
-      paid: `Asante 🌱 Payment received. Order ${order.id} confirmed.`,
+      paid: `Asante 🌱 Payment received. Order ${trackedId.slice(0, 8)} confirmed.`,
       preparing: `📦 Hub is packing your box. ETA 35 min.`,
-      picked: `🛵 ${order.rider} picked up your box from ${order.route.split(" → ")[0]}.`,
-      in_transit: `🚦 Rider is 12 min away. Track: m.atlas.ke/b/${order.id.slice(-4)}`,
+      picked: `🛵 ${trackedRider} picked up your box from ${trackedRoute.split(" → ")[0]}.`,
+      in_transit: `🚦 Rider is 12 min away. Track: m.atlas.ke/b/${trackedId.slice(-4)}`,
       delivered: `✅ Delivered at ${now()}. Karibu tena. Reply RATE to leave feedback.`,
+      failed: `⚠️ Payment failed. Reply RETRY to try again.`,
     };
-    push("atlas", lines[order.status]);
+    const text = lines[trackedStatus];
+    if (text) push("atlas", text);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [order?.status]);
+  }, [trackedStatus, trackedId]);
 
   const push = (from: "atlas" | "me", text: string) =>
     setMsgs((m) => [...m, { from, text, at: now(), status: from === "me" ? "read" : undefined }]);
+
+  const confirmPayment = async () => {
+    if (!selectedBox) return;
+    const items = [
+      {
+        id: selectedBox.id,
+        name: selectedBox.name,
+        farm: "Atlas Hub · Westlands",
+        price: selectedBox.price,
+        unit: "wk",
+        qty: 1,
+      },
+    ];
+    if (userId) {
+      try {
+        const res = await createOrderFn({
+          data: { items, phone: "0711000000", channel: "whatsapp" },
+        });
+        setLiveOrder({
+          id: res.order_id,
+          status: "preparing",
+          progress: PROGRESS_BY_STATUS.preparing,
+          rider: "Brian K.",
+          route: "Westlands Hub → You",
+          total: res.total,
+          source: "db",
+        });
+        setPhase("tracking");
+        return;
+      } catch (e) {
+        push("atlas", `Couldn't save your order to the network (${(e as Error).message}). Falling back to local tracking.`);
+      }
+    }
+    const o = placeOrder({
+      items,
+      total: selectedBox.price,
+      phone: "07••• ••• •••",
+      rider: "Brian K.",
+      route: "Westlands Hub → You",
+      channel: "whatsapp",
+    });
+    setLiveOrder({
+      id: o.id,
+      status: o.status,
+      progress: o.progress,
+      rider: o.rider,
+      route: o.route,
+      total: o.total,
+      source: "local",
+    });
+    setPhase("tracking");
+  };
 
   const handleSend = (raw?: string) => {
     const text = (raw ?? draft).trim();
@@ -105,30 +234,21 @@ function FoodboxPage() {
         );
         setPhase("pay");
       } else if (phase === "pay") {
-        const o = placeOrder({
-          items: [
-            {
-              id: selectedBox!.id,
-              name: selectedBox!.name,
-              farm: "Atlas Hub · Westlands",
-              price: selectedBox!.price,
-              unit: "wk",
-              qty: 1,
-            },
-          ],
-          total: selectedBox!.price,
-          phone: "07••• ••• •••",
-          rider: "Brian K.",
-          route: "Westlands Hub → You",
-          channel: "whatsapp",
-        });
-        setOrderId(o.id);
-        setPhase("tracking");
+        void confirmPayment();
       } else {
         push("atlas", "I'll keep you posted on each step. Reply HELP for support.");
       }
     }, 600);
   };
+
+  const displayOrder = liveOrder
+    ? {
+        id: liveOrder.id,
+        status: liveOrder.status as OrderStatus,
+        progress: liveOrder.progress,
+        source: liveOrder.source,
+      }
+    : null;
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -166,6 +286,11 @@ function FoodboxPage() {
             Subscribe to a weekly box, pay with M-Pesa, and get SMS-style updates as your rider
             moves. Works on 2G.
           </p>
+          {!userId && (
+            <p className="mt-2 text-xs text-clay">
+              Sign in to save your order to the network and get realtime status updates.
+            </p>
+          )}
 
           <div className="mt-6 space-y-2">
             {BOXES.map((b, i) => (
@@ -186,32 +311,40 @@ function FoodboxPage() {
             ))}
           </div>
 
-          {order && (
+          {displayOrder && (
             <div className="mt-6 rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-soft)]">
-              <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                Live order
+              <div className="flex items-center justify-between text-xs uppercase tracking-wider text-muted-foreground">
+                <span>Live order</span>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] normal-case tracking-normal">
+                  {displayOrder.source === "db" ? "realtime · network" : "local demo"}
+                </span>
               </div>
               <div className="mt-1 flex items-center justify-between">
-                <div className="font-mono text-sm text-foreground">{order.id}</div>
+                <div className="font-mono text-sm text-foreground">{displayOrder.id.slice(0, 12)}</div>
                 <span className="rounded-md bg-gold/15 px-2 py-0.5 text-[11px] font-medium text-clay">
-                  {statusLabel(order.status)}
+                  {statusLabel(displayOrder.status)}
                 </span>
               </div>
               <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
                 <div
                   className="h-full bg-gradient-to-r from-forest to-moss transition-all duration-700"
-                  style={{ width: `${order.progress}%` }}
+                  style={{ width: `${displayOrder.progress}%` }}
                 />
               </div>
-              {order.status !== "delivered" && (
+              {displayOrder.source === "local" && displayOrder.status !== "delivered" && (
                 <Button
                   variant="outline"
                   size="sm"
                   className="mt-3 w-full"
-                  onClick={() => advanceOrder(order.id)}
+                  onClick={() => advanceOrder(displayOrder.id)}
                 >
                   Simulate next update
                 </Button>
+              )}
+              {displayOrder.source === "db" && (
+                <p className="mt-3 text-center text-[11px] text-muted-foreground">
+                  Updates stream live from the operations console.
+                </p>
               )}
             </div>
           )}

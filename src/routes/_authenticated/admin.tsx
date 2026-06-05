@@ -15,7 +15,7 @@ import { getZones, getListings } from "@/lib/atlas-cloud.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { AtlasMark } from "@/components/atlas/AtlasMark";
-import { ShieldCheck, Trash2, Plus, LogOut } from "lucide-react";
+import { ShieldCheck, Trash2, Plus, LogOut, Landmark } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Admin — Atlas Sanctum" }] }),
@@ -101,7 +101,14 @@ function AdminPage() {
             <AtlasMark className="h-7 w-7" />
             <span className="font-display text-sm">Atlas · Admin</span>
           </Link>
-          <Button variant="ghost" size="sm" onClick={logout}><LogOut className="h-4 w-4" /> Sign out</Button>
+          <div className="flex items-center gap-2">
+            <Link to="/admin-economy">
+              <Button variant="ghost" size="sm" className="gap-1.5 text-clay">
+                <Landmark className="h-4 w-4" /> Economy
+              </Button>
+            </Link>
+            <Button variant="ghost" size="sm" onClick={logout}><LogOut className="h-4 w-4" /> Sign out</Button>
+          </div>
         </div>
       </header>
 

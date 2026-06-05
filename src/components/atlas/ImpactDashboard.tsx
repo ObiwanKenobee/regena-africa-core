@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Section, SectionHeader } from "./Section";
+import { ZoneImpactWidget } from "./ZoneImpactWidget";
 import { Users, Recycle, Truck, Leaf, Cloud, Wallet } from "lucide-react";
 import { ZONES, useAtlas, type Zone } from "@/lib/atlas-store";
 import { getZones } from "@/lib/atlas-cloud.functions";
@@ -123,6 +124,9 @@ export function ImpactDashboard() {
         title="The economy, measured honestly."
         description="Click any zone on the map to see what's flowing through that county right now. Every kilogram, kilowatt, and shilling is tracked, verified, and shared back."
       />
+
+      <ZoneImpactWidget />
+
 
       {isError && (
         <div className="mt-6 flex items-center justify-between rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-2 text-xs text-destructive">

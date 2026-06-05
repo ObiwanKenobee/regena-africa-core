@@ -282,3 +282,17 @@ function GovernanceInner() {
     </Section>
   );
 }
+
+export function Governance() {
+  return (
+    <OnboardingGate
+      id="governance"
+      eyebrow="Governance & Ownership"
+      title={<>Communities decide. <span className="text-gradient-forest">Atlas executes.</span></>}
+      description="Local councils, SACCOs, and elected stewards vote on treasury allocations, partnerships, and rules."
+    >
+      <GovernanceInner />
+    </OnboardingGate>
+  );
+}
+
