@@ -125,6 +125,9 @@ export function ImpactDashboard() {
         description="Click any zone on the map to see what's flowing through that county right now. Every kilogram, kilowatt, and shilling is tracked, verified, and shared back."
       />
 
+      <ZoneImpactWidget />
+
+
       {isError && (
         <div className="mt-6 flex items-center justify-between rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-2 text-xs text-destructive">
           <span>
