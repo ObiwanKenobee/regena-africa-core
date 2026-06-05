@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Section, SectionHeader } from "./Section";
+import { ZoneImpactWidget } from "./ZoneImpactWidget";
 import { Users, Recycle, Truck, Leaf, Cloud, Wallet } from "lucide-react";
 import { ZONES, useAtlas, type Zone } from "@/lib/atlas-store";
 import { getZones } from "@/lib/atlas-cloud.functions";
