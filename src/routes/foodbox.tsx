@@ -328,22 +328,50 @@ function FoodboxPage() {
             <div className="mt-6 rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-soft)]">
               <div className="flex items-center justify-between text-xs uppercase tracking-wider text-muted-foreground">
                 <span>Live order</span>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] normal-case tracking-normal">
-                  {displayOrder.source === "db" ? "realtime · network" : "local demo"}
-                </span>
+                {displayOrder.source === "db" ? (
+                  <ConnectionBadge
+                    state={conn}
+                    lastSyncedAt={lastSyncedAt}
+                    onRetry={() => setRetryToken((n) => n + 1)}
+                  />
+                ) : (
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] normal-case tracking-normal">
+                    local demo
+                  </span>
+                )}
               </div>
+
               <div className="mt-1 flex items-center justify-between">
-                <div className="font-mono text-sm text-foreground">{displayOrder.id.slice(0, 12)}</div>
-                <span className="rounded-md bg-gold/15 px-2 py-0.5 text-[11px] font-medium text-clay">
-                  {statusLabel(displayOrder.status)}
-                </span>
+                <div className="font-mono text-sm text-foreground">
+                  {displayOrder.id.slice(0, 12)}
+                </div>
+                <StatusPill status={displayOrder.status} />
               </div>
+
               <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
                 <div
                   className="h-full bg-gradient-to-r from-forest to-moss transition-all duration-700"
-                  style={{ width: `${displayOrder.progress}%` }}
+                  style={{ width: `${Math.max(0, Math.min(100, displayOrder.progress))}%` }}
                 />
               </div>
+
+              <StatusTimeline current={displayOrder.status} />
+
+              {displayOrder.source === "db" && conn === "error" && (
+                <div className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-[11px] text-destructive">
+                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <div className="flex-1">
+                    Live updates disconnected. Showing last known status.
+                  </div>
+                  <button
+                    onClick={() => setRetryToken((n) => n + 1)}
+                    className="inline-flex items-center gap-1 font-medium underline"
+                  >
+                    <RefreshCw className="h-3 w-3" /> Retry
+                  </button>
+                </div>
+              )}
+
               {displayOrder.source === "local" && displayOrder.status !== "delivered" && (
                 <Button
                   variant="outline"
@@ -354,14 +382,10 @@ function FoodboxPage() {
                   Simulate next update
                 </Button>
               )}
-              {displayOrder.source === "db" && (
-                <p className="mt-3 text-center text-[11px] text-muted-foreground">
-                  Updates stream live from the operations console.
-                </p>
-              )}
             </div>
           )}
         </section>
+
 
         {/* Chat */}
         <section className="lg:col-span-3">
