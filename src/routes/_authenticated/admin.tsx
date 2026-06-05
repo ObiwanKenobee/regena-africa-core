@@ -101,7 +101,14 @@ function AdminPage() {
             <AtlasMark className="h-7 w-7" />
             <span className="font-display text-sm">Atlas · Admin</span>
           </Link>
-          <Button variant="ghost" size="sm" onClick={logout}><LogOut className="h-4 w-4" /> Sign out</Button>
+          <div className="flex items-center gap-2">
+            <Link to="/admin-economy">
+              <Button variant="ghost" size="sm" className="gap-1.5 text-clay">
+                <Landmark className="h-4 w-4" /> Economy
+              </Button>
+            </Link>
+            <Button variant="ghost" size="sm" onClick={logout}><LogOut className="h-4 w-4" /> Sign out</Button>
+          </div>
         </div>
       </header>
 
