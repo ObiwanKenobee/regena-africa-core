@@ -32,6 +32,7 @@ function GovernanceInner() {
   const voteFn = useServerFn(voteOnProposal);
   const createFn = useServerFn(createProposal);
   const myVotesFn = useServerFn(getMyVotes);
+  const auditFn = useServerFn(getProposalAuditTrail);
 
   const [userId, setUserId] = useState<string | null>(null);
   const [draftOpen, setDraftOpen] = useState(false);
