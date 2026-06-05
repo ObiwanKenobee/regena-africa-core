@@ -443,3 +443,114 @@ function FoodboxPage() {
     </div>
   );
 }
+
+// ---- Status UI helpers ----
+
+const KNOWN_STATUSES = [
+  "pending",
+  "stk_sent",
+  "paid",
+  "preparing",
+  "picked",
+  "in_transit",
+  "delivered",
+] as const;
+
+const STATUS_META: Record<string, { label: string; tone: string }> = {
+  pending: { label: "Awaiting payment", tone: "bg-muted text-muted-foreground" },
+  stk_sent: { label: "STK push sent", tone: "bg-gold/15 text-clay" },
+  paid: { label: "Paid", tone: "bg-moss/20 text-forest" },
+  preparing: { label: "Packing your box", tone: "bg-gold/15 text-clay" },
+  picked: { label: "Rider picked up", tone: "bg-gold/15 text-clay" },
+  in_transit: { label: "On the way", tone: "bg-gold/15 text-clay" },
+  delivered: { label: "Delivered", tone: "bg-moss/20 text-forest" },
+  failed: { label: "Payment failed", tone: "bg-destructive/10 text-destructive" },
+  cancelled: { label: "Cancelled", tone: "bg-destructive/10 text-destructive" },
+};
+
+function StatusPill({ status }: { status: string | null | undefined }) {
+  if (!status) {
+    return (
+      <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+        Status pending…
+      </span>
+    );
+  }
+  const meta = STATUS_META[status];
+  if (!meta) {
+    return (
+      <span
+        title={`Unknown status: ${status}`}
+        className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+      >
+        {statusLabel(status as OrderStatus) || status}
+      </span>
+    );
+  }
+  return (
+    <span className={`rounded-md px-2 py-0.5 text-[11px] font-medium ${meta.tone}`}>
+      {meta.label}
+    </span>
+  );
+}
+
+function StatusTimeline({ current }: { current: string | null | undefined }) {
+  const currentIdx = current ? KNOWN_STATUSES.indexOf(current as (typeof KNOWN_STATUSES)[number]) : -1;
+  // Failed/cancelled don't belong in the timeline — show a simple banner instead.
+  if (current === "failed" || current === "cancelled") return null;
+  return (
+    <ol className="mt-3 grid grid-cols-7 gap-0.5 text-[9px] text-muted-foreground">
+      {KNOWN_STATUSES.map((s, i) => {
+        const reached = currentIdx >= i;
+        return (
+          <li key={s} className="flex flex-col items-center gap-1">
+            <span
+              className={`h-1.5 w-full rounded-full transition-colors ${
+                reached ? "bg-forest" : "bg-muted"
+              }`}
+            />
+            <span className={`truncate ${reached ? "text-foreground" : ""}`}>
+              {STATUS_META[s]?.label.split(" ")[0] ?? s}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function ConnectionBadge({
+  state,
+  lastSyncedAt,
+  onRetry,
+}: {
+  state: "idle" | "connecting" | "live" | "error";
+  lastSyncedAt: number | null;
+  onRetry: () => void;
+}) {
+  if (state === "live") {
+    const synced = lastSyncedAt
+      ? `synced ${Math.round((Date.now() - lastSyncedAt) / 1000)}s ago`
+      : "live";
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-moss/15 px-2 py-0.5 text-[10px] normal-case tracking-normal text-forest">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-forest" /> {synced}
+      </span>
+    );
+  }
+  if (state === "connecting" || state === "idle") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] normal-case tracking-normal text-muted-foreground">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted-foreground/60" /> connecting…
+      </span>
+    );
+  }
+  return (
+    <button
+      onClick={onRetry}
+      className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] normal-case tracking-normal text-destructive"
+    >
+      <RefreshCw className="h-2.5 w-2.5" /> retry
+    </button>
+  );
+}
