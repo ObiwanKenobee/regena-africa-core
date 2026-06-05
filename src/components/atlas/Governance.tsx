@@ -57,12 +57,23 @@ function GovernanceInner() {
   });
   const myVotes = new Map((myVotesQ.data?.votes ?? []).map((v) => [v.proposal_id, v.vote]));
 
-  // Realtime: refresh on proposal changes
+  const auditQ = useQuery({
+    queryKey: ["proposal-audit"],
+    queryFn: () => auditFn(),
+    refetchInterval: 15_000,
+    staleTime: 10_000,
+  });
+
+  // Realtime: refresh on proposal/vote changes
   useEffect(() => {
     const ch = supabase
       .channel("proposals-feed")
-      .on("postgres_changes", { event: "*", schema: "public", table: "proposals" }, () =>
-        qc.invalidateQueries({ queryKey: ["proposals"] }),
+      .on("postgres_changes", { event: "*", schema: "public", table: "proposals" }, () => {
+        qc.invalidateQueries({ queryKey: ["proposals"] });
+        qc.invalidateQueries({ queryKey: ["proposal-audit"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "proposal_votes" }, () =>
+        qc.invalidateQueries({ queryKey: ["proposal-audit"] }),
       )
       .subscribe();
     return () => {
