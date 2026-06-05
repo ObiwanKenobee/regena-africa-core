@@ -1,5 +1,5 @@
 import { Section, SectionHeader } from "./Section";
-import { Vote, FileText, Landmark, CheckCircle2, Loader2, Plus } from "lucide-react";
+import { Vote, Landmark, CheckCircle2, Loader2, Plus, History, Sparkles, Gavel } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +9,7 @@ import {
   voteOnProposal,
   createProposal,
   getMyVotes,
+  getProposalAuditTrail,
 } from "@/lib/atlas-cloud.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ function GovernanceInner() {
   const voteFn = useServerFn(voteOnProposal);
   const createFn = useServerFn(createProposal);
   const myVotesFn = useServerFn(getMyVotes);
+  const auditFn = useServerFn(getProposalAuditTrail);
 
   const [userId, setUserId] = useState<string | null>(null);
   const [draftOpen, setDraftOpen] = useState(false);
@@ -55,12 +57,23 @@ function GovernanceInner() {
   });
   const myVotes = new Map((myVotesQ.data?.votes ?? []).map((v) => [v.proposal_id, v.vote]));
 
-  // Realtime: refresh on proposal changes
+  const auditQ = useQuery({
+    queryKey: ["proposal-audit"],
+    queryFn: () => auditFn(),
+    refetchInterval: 15_000,
+    staleTime: 10_000,
+  });
+
+  // Realtime: refresh on proposal/vote changes
   useEffect(() => {
     const ch = supabase
       .channel("proposals-feed")
-      .on("postgres_changes", { event: "*", schema: "public", table: "proposals" }, () =>
-        qc.invalidateQueries({ queryKey: ["proposals"] }),
+      .on("postgres_changes", { event: "*", schema: "public", table: "proposals" }, () => {
+        qc.invalidateQueries({ queryKey: ["proposals"] });
+        qc.invalidateQueries({ queryKey: ["proposal-audit"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "proposal_votes" }, () =>
+        qc.invalidateQueries({ queryKey: ["proposal-audit"] }),
       )
       .subscribe();
     return () => {
@@ -253,17 +266,48 @@ function GovernanceInner() {
           </div>
 
           <div className="rounded-2xl border border-border bg-card p-5">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-              <FileText className="h-4 w-4" /> Audit Log · Live
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+                <History className="h-4 w-4" /> Audit trail · Live
+              </div>
+              {auditQ.isFetching && (
+                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+              )}
             </div>
-            <ul className="mt-3 space-y-2 text-xs text-muted-foreground">
-              {proposals.slice(0, 4).map((p) => (
-                <li key={p.id}>
-                  <span className="font-mono">{p.id.slice(0, 6).toUpperCase()}</span> · {p.status} ·{" "}
-                  {p.yes_count + p.no_count} votes
-                </li>
-              ))}
-              {proposals.length === 0 && <li>No on-chain activity yet.</li>}
+            <ul className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1 text-xs">
+              {(auditQ.data?.events ?? []).map((ev) => {
+                const Icon = ev.kind === "created" ? Sparkles : ev.kind === "voted" ? Vote : Gavel;
+                const tone =
+                  ev.kind === "created"
+                    ? "text-forest"
+                    : ev.kind === "voted"
+                      ? "text-clay"
+                      : "text-gold";
+                return (
+                  <li key={ev.id} className="flex gap-2">
+                    <Icon className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${tone}`} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-foreground">
+                        <span className="font-mono text-[10px] text-muted-foreground">
+                          {ev.actor}
+                        </span>{" "}
+                        {ev.detail}{" "}
+                        <span className="text-muted-foreground">on</span>{" "}
+                        <span className="font-medium">{ev.proposal_title}</span>
+                      </div>
+                      <div className="text-[10px] tabular-nums text-muted-foreground">
+                        {new Date(ev.at).toLocaleString("en-KE", { hour12: false })}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+              {auditQ.isLoading && (
+                <li className="text-muted-foreground">Loading audit trail…</li>
+              )}
+              {!auditQ.isLoading && (auditQ.data?.events ?? []).length === 0 && (
+                <li className="text-muted-foreground">No governance activity yet.</li>
+              )}
             </ul>
           </div>
 

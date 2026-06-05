@@ -377,3 +377,72 @@ export const getZoneImpact = createServerFn({ method: "GET" }).handler(async () 
   return { zones: Array.from(byZone.values()), totals };
 });
 
+
+// ---- Public proposal audit feed ----
+// Merges proposal lifecycle (created/status updates) with anonymized votes.
+// Returns most recent 30 events in chronological order.
+export const getProposalAuditTrail = createServerFn({ method: "GET" }).handler(async () => {
+  const [propRes, voteRes] = await Promise.all([
+    supabaseAdmin
+      .from("proposals")
+      .select("id, title, status, created_at, updated_at, created_by")
+      .order("updated_at", { ascending: false })
+      .limit(40),
+    supabaseAdmin
+      .from("proposal_votes")
+      .select("id, proposal_id, user_id, vote, created_at")
+      .order("created_at", { ascending: false })
+      .limit(40),
+  ]);
+  if (propRes.error) throw new Error(propRes.error.message);
+  if (voteRes.error) throw new Error(voteRes.error.message);
+
+  const titles = new Map((propRes.data ?? []).map((p) => [p.id, p.title]));
+
+  type Event = {
+    id: string;
+    at: string;
+    kind: "created" | "status" | "voted";
+    proposal_id: string;
+    proposal_title: string;
+    actor: string; // short, anonymized actor id
+    detail: string;
+  };
+
+  const events: Event[] = [];
+  for (const p of propRes.data ?? []) {
+    events.push({
+      id: `c-${p.id}`,
+      at: p.created_at,
+      kind: "created",
+      proposal_id: p.id,
+      proposal_title: p.title,
+      actor: p.created_by ? p.created_by.slice(0, 8) : "system",
+      detail: "opened for voting",
+    });
+    if (p.updated_at && p.updated_at !== p.created_at && p.status !== "voting") {
+      events.push({
+        id: `s-${p.id}-${p.status}`,
+        at: p.updated_at,
+        kind: "status",
+        proposal_id: p.id,
+        proposal_title: p.title,
+        actor: "council",
+        detail: `marked ${p.status}`,
+      });
+    }
+  }
+  for (const v of voteRes.data ?? []) {
+    events.push({
+      id: `v-${v.id}`,
+      at: v.created_at,
+      kind: "voted",
+      proposal_id: v.proposal_id,
+      proposal_title: titles.get(v.proposal_id) ?? "—",
+      actor: v.user_id.slice(0, 8),
+      detail: v.vote ? "voted Yes" : "voted No",
+    });
+  }
+  events.sort((a, b) => +new Date(b.at) - +new Date(a.at));
+  return { events: events.slice(0, 30) };
+});

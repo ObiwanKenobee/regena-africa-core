@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Wifi, WifiOff, CheckCheck, ArrowLeft } from "lucide-react";
+import { Wifi, WifiOff, CheckCheck, ArrowLeft, RefreshCw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAtlas, statusLabel, type OrderStatus } from "@/lib/atlas-store";
 import { AtlasMark } from "@/components/atlas/AtlasMark";
@@ -71,6 +71,9 @@ function FoodboxPage() {
   const [liveOrder, setLiveOrder] = useState<LiveOrder | null>(null);
   const [phase, setPhase] = useState<"choose" | "address" | "pay" | "tracking">("choose");
   const [selectedBox, setSelectedBox] = useState<typeof BOXES[number] | null>(null);
+  const [conn, setConn] = useState<"idle" | "connecting" | "live" | "error">("idle");
+  const [retryToken, setRetryToken] = useState(0);
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -88,17 +91,20 @@ function FoodboxPage() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [msgs]);
 
-  // Subscribe to persisted order status via Supabase Realtime (authed orders only)
+  // Subscribe to persisted order status via Supabase Realtime (authed orders only).
+  // Tracks channel state so the UI can show connecting / live / error and offer retry.
   useEffect(() => {
     if (!liveOrder || liveOrder.source !== "db") return;
     const orderId = liveOrder.id;
+    setConn("connecting");
     const ch = supabase
-      .channel(`order-${orderId}`)
+      .channel(`order-${orderId}-${retryToken}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "orders", filter: `id=eq.${orderId}` },
         (payload) => {
           const row = payload.new as Record<string, unknown>;
+          setLastSyncedAt(Date.now());
           setLiveOrder((prev) =>
             prev
               ? {
@@ -115,11 +121,18 @@ function FoodboxPage() {
           );
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          setConn("live");
+          setLastSyncedAt(Date.now());
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          setConn("error");
+        }
+      });
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [liveOrder?.id, liveOrder?.source]);
+  }, [liveOrder?.id, liveOrder?.source, retryToken]);
 
   // SMS-style delivery updates: append a chat msg whenever tracked order status changes
   const lastStatusRef = useRef<string | null>(null);
@@ -315,22 +328,50 @@ function FoodboxPage() {
             <div className="mt-6 rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-soft)]">
               <div className="flex items-center justify-between text-xs uppercase tracking-wider text-muted-foreground">
                 <span>Live order</span>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] normal-case tracking-normal">
-                  {displayOrder.source === "db" ? "realtime · network" : "local demo"}
-                </span>
+                {displayOrder.source === "db" ? (
+                  <ConnectionBadge
+                    state={conn}
+                    lastSyncedAt={lastSyncedAt}
+                    onRetry={() => setRetryToken((n) => n + 1)}
+                  />
+                ) : (
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] normal-case tracking-normal">
+                    local demo
+                  </span>
+                )}
               </div>
+
               <div className="mt-1 flex items-center justify-between">
-                <div className="font-mono text-sm text-foreground">{displayOrder.id.slice(0, 12)}</div>
-                <span className="rounded-md bg-gold/15 px-2 py-0.5 text-[11px] font-medium text-clay">
-                  {statusLabel(displayOrder.status)}
-                </span>
+                <div className="font-mono text-sm text-foreground">
+                  {displayOrder.id.slice(0, 12)}
+                </div>
+                <StatusPill status={displayOrder.status} />
               </div>
+
               <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
                 <div
                   className="h-full bg-gradient-to-r from-forest to-moss transition-all duration-700"
-                  style={{ width: `${displayOrder.progress}%` }}
+                  style={{ width: `${Math.max(0, Math.min(100, displayOrder.progress))}%` }}
                 />
               </div>
+
+              <StatusTimeline current={displayOrder.status} />
+
+              {displayOrder.source === "db" && conn === "error" && (
+                <div className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-[11px] text-destructive">
+                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <div className="flex-1">
+                    Live updates disconnected. Showing last known status.
+                  </div>
+                  <button
+                    onClick={() => setRetryToken((n) => n + 1)}
+                    className="inline-flex items-center gap-1 font-medium underline"
+                  >
+                    <RefreshCw className="h-3 w-3" /> Retry
+                  </button>
+                </div>
+              )}
+
               {displayOrder.source === "local" && displayOrder.status !== "delivered" && (
                 <Button
                   variant="outline"
@@ -341,14 +382,10 @@ function FoodboxPage() {
                   Simulate next update
                 </Button>
               )}
-              {displayOrder.source === "db" && (
-                <p className="mt-3 text-center text-[11px] text-muted-foreground">
-                  Updates stream live from the operations console.
-                </p>
-              )}
             </div>
           )}
         </section>
+
 
         {/* Chat */}
         <section className="lg:col-span-3">
@@ -404,5 +441,116 @@ function FoodboxPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+// ---- Status UI helpers ----
+
+const KNOWN_STATUSES = [
+  "pending",
+  "stk_sent",
+  "paid",
+  "preparing",
+  "picked",
+  "in_transit",
+  "delivered",
+] as const;
+
+const STATUS_META: Record<string, { label: string; tone: string }> = {
+  pending: { label: "Awaiting payment", tone: "bg-muted text-muted-foreground" },
+  stk_sent: { label: "STK push sent", tone: "bg-gold/15 text-clay" },
+  paid: { label: "Paid", tone: "bg-moss/20 text-forest" },
+  preparing: { label: "Packing your box", tone: "bg-gold/15 text-clay" },
+  picked: { label: "Rider picked up", tone: "bg-gold/15 text-clay" },
+  in_transit: { label: "On the way", tone: "bg-gold/15 text-clay" },
+  delivered: { label: "Delivered", tone: "bg-moss/20 text-forest" },
+  failed: { label: "Payment failed", tone: "bg-destructive/10 text-destructive" },
+  cancelled: { label: "Cancelled", tone: "bg-destructive/10 text-destructive" },
+};
+
+function StatusPill({ status }: { status: string | null | undefined }) {
+  if (!status) {
+    return (
+      <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+        Status pending…
+      </span>
+    );
+  }
+  const meta = STATUS_META[status];
+  if (!meta) {
+    return (
+      <span
+        title={`Unknown status: ${status}`}
+        className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+      >
+        {statusLabel(status as OrderStatus) || status}
+      </span>
+    );
+  }
+  return (
+    <span className={`rounded-md px-2 py-0.5 text-[11px] font-medium ${meta.tone}`}>
+      {meta.label}
+    </span>
+  );
+}
+
+function StatusTimeline({ current }: { current: string | null | undefined }) {
+  const currentIdx = current ? KNOWN_STATUSES.indexOf(current as (typeof KNOWN_STATUSES)[number]) : -1;
+  // Failed/cancelled don't belong in the timeline — show a simple banner instead.
+  if (current === "failed" || current === "cancelled") return null;
+  return (
+    <ol className="mt-3 grid grid-cols-7 gap-0.5 text-[9px] text-muted-foreground">
+      {KNOWN_STATUSES.map((s, i) => {
+        const reached = currentIdx >= i;
+        return (
+          <li key={s} className="flex flex-col items-center gap-1">
+            <span
+              className={`h-1.5 w-full rounded-full transition-colors ${
+                reached ? "bg-forest" : "bg-muted"
+              }`}
+            />
+            <span className={`truncate ${reached ? "text-foreground" : ""}`}>
+              {STATUS_META[s]?.label.split(" ")[0] ?? s}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function ConnectionBadge({
+  state,
+  lastSyncedAt,
+  onRetry,
+}: {
+  state: "idle" | "connecting" | "live" | "error";
+  lastSyncedAt: number | null;
+  onRetry: () => void;
+}) {
+  if (state === "live") {
+    const synced = lastSyncedAt
+      ? `synced ${Math.round((Date.now() - lastSyncedAt) / 1000)}s ago`
+      : "live";
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-moss/15 px-2 py-0.5 text-[10px] normal-case tracking-normal text-forest">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-forest" /> {synced}
+      </span>
+    );
+  }
+  if (state === "connecting" || state === "idle") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] normal-case tracking-normal text-muted-foreground">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted-foreground/60" /> connecting…
+      </span>
+    );
+  }
+  return (
+    <button
+      onClick={onRetry}
+      className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] normal-case tracking-normal text-destructive"
+    >
+      <RefreshCw className="h-2.5 w-2.5" /> retry
+    </button>
   );
 }
